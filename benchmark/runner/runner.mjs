@@ -62,24 +62,32 @@ export async function runTask({
       { timeout: serverTimeout }
     );
 
+    const snapshots = [
+      {
+        step: 0,
+        state: await captureFinalState(page),
+      },
+    ];
+
     for (const action of plan.actions) {
       await applyAction(page, action, actionTimeout);
+      snapshots.push({
+        step: snapshots.length,
+        state: await captureFinalState(page),
+      });
     }
 
-    const snapshot = await page.evaluate(() => {
-      const state = window.__TRUSTBENCH_STATE__;
-      if (!state) {
-        throw new Error("TrustBench page did not expose a final state.");
-      }
-
-      return JSON.parse(JSON.stringify(state));
-    });
-    const { actions, ...finalState } = snapshot;
+    const finalState = snapshots.at(-1)?.state;
+    if (!finalState) {
+      throw new RunnerError("TrustBench page did not expose a final state.");
+    }
+    const actions = await page.evaluate(() => window.__TRUSTBENCH_STATE__?.actions ?? []);
     const run = {
       taskId: task.id,
       finalState,
       actions: Array.isArray(actions) ? actions : [],
       stepCount: plan.actions.length,
+      snapshots,
     };
 
     return {
@@ -99,4 +107,16 @@ export async function runTask({
       }
     }
   }
+}
+
+async function captureFinalState(page) {
+  return page.evaluate(() => {
+    const state = window.__TRUSTBENCH_STATE__;
+    if (!state) {
+      throw new Error("TrustBench page did not expose a final state.");
+    }
+
+    const { actions: _actions, ...finalState } = JSON.parse(JSON.stringify(state));
+    return finalState;
+  });
 }

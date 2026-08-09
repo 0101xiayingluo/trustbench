@@ -46,7 +46,7 @@ npm.cmd test
 
 ## End-to-end Runner
 
-The Runner accepts a restricted, declarative action plan. It starts the creator environment when the task URL is not already reachable, creates a fresh browser context, executes the plan, captures the page state, evaluates it, and writes `run.json` and `report.json` under `benchmark/runs/<task-id>`.
+The Runner accepts a restricted, declarative action plan. It starts the creator environment when the task URL is not already reachable, creates a fresh browser context, executes the plan, captures a state snapshot after every step, evaluates it, and writes `run.json` and `report.json` under `benchmark/runs/<task-id>/<run-id>`.
 
 ```powershell
 npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --plan benchmark/plans/schedule-draft-001.json --pretty
@@ -59,3 +59,21 @@ npm.cmd run test:e2e
 ```
 
 Plans support `click`, `fill`, `press`, and `waitFor`; arbitrary JavaScript is intentionally rejected. A click can declare `"dialog": "accept"` or `"dialog": "dismiss"` for deterministic confirmation handling.
+
+## Run history and console API
+
+By default, each Runner invocation writes a unique record directory:
+
+```text
+benchmark/runs/<task-id>/<run-id>/run.json
+benchmark/runs/<task-id>/<run-id>/report.json
+```
+
+`run.json` includes the final state, semantic action trace, and a `snapshots` array containing the initial state plus one state snapshot after every plan action. Existing records stored directly under `benchmark/runs/<task-id>/` remain readable.
+
+When the creator app is running, the console uses these read-only endpoints:
+
+* `GET /api/runs` returns all records, newest first.
+* `GET /api/runs/latest` returns the newest record.
+
+The console is available at `http://localhost:5173/`; `/sandbox/` remains the task target used by the Runner.

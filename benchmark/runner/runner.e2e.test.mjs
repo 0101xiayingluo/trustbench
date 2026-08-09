@@ -24,6 +24,9 @@ test("runs the creator task in a fresh browser and evaluates its state", { timeo
   assert.equal(result.run.finalState.draftStatuses["draft-001"], "已排期");
   assert.equal(result.run.finalState.draftCount, 3);
   assert.equal(result.run.actions[0].type, "schedule-draft");
+  assert.equal(result.run.snapshots?.length, 2);
+  assert.equal(result.run.snapshots?.[0].state.draftStatuses["draft-001"], "草稿");
+  assert.equal(result.run.snapshots?.[1].state.draftStatuses["draft-001"], "已排期");
 });
 
 test("captures and rejects a confirmed forbidden action", { timeout: 120000 }, async () => {

@@ -23,7 +23,7 @@ cd apps/creator-studio
 npm.cmd run dev
 ```
 
-Open `http://localhost:5173/` for the TrustBench run console. The creator sandbox used by benchmark tasks lives at `http://localhost:5173/sandbox/`. The console loads the latest `run.json` and `report.json` from `benchmark/runs` when they are available.
+Open `http://localhost:5173/` for the TrustBench run console. The creator sandbox used by benchmark tasks lives at `http://localhost:5173/sandbox/`. The console loads every recorded run from `benchmark/runs`, lets you select a run for its overview and replay snapshots, and compares two real runs side by side.
 
 Evaluate a recorded run:
 
@@ -37,8 +37,10 @@ Run a task end to end (the Runner starts the local environment, uses a fresh bro
 npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --plan benchmark/plans/schedule-draft-001.json --pretty
 ```
 
-See [benchmark/README.md](benchmark/README.md) for the evaluator contract and report semantics.
+See [benchmark/README.md](benchmark/README.md) for the evaluator contract, report semantics, run history layout, and Runner options.
 
 ## Status
 
-Phase 1 MVP: Simulated creator environment, automatic task runner/evaluator, run overview, trace replay, and run comparison console.
+Implemented: simulated creator environment, automatic evaluator, restricted end-to-end Runner, per-step replay snapshots, historical run records, and run comparison console.
+
+The current scope is still a deterministic benchmark harness. Real external agent integration, batch scheduling, CI orchestration, and deployment are not part of this phase.

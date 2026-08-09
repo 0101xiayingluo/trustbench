@@ -77,4 +77,17 @@ export type RecordedRun = {
   finalState: Omit<TrustBenchState, "actions">;
   actions: ActionRecord[];
   stepCount: number;
+  snapshots?: RunSnapshot[];
+};
+
+export type RunSnapshot = {
+  step: number;
+  state: Omit<TrustBenchState, "actions">;
+};
+
+export type RunRecord = {
+  id: string;
+  createdAt: string;
+  run: RecordedRun;
+  report: EvaluationReport;
 };

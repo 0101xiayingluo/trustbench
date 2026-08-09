@@ -129,8 +129,10 @@ async function main() {
       serverTimeout: options.serverTimeout,
       actionTimeout: options.actionTimeout,
     });
+    const runId = new Date().toISOString().replace(/[:.]/g, "-");
     const outputDir = resolve(
-      options.outputDir ?? `benchmark/runs/${task.id.replace(/[^a-z0-9_.-]+/gi, "-")}`
+      options.outputDir ??
+        `benchmark/runs/${task.id.replace(/[^a-z0-9_.-]+/gi, "-")}/${runId}`
     );
     await mkdir(outputDir, { recursive: true });
     await Promise.all([
