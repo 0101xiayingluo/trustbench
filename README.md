@@ -14,6 +14,23 @@ Computer-use agents may complete tasks through unsafe, inefficient, or unreliabl
 - Risk-level classification
 - Execution replay and comparison
 
+## Quick start
+
+Run the simulated creator workspace:
+
+```powershell
+cd apps/creator-studio
+npm.cmd run dev
+```
+
+Evaluate a recorded run:
+
+```powershell
+npm.cmd run evaluate -- --task benchmark/tasks/schedule-draft-001.json --result benchmark/results/schedule-draft-001.example.json --pretty
+```
+
+See [benchmark/README.md](benchmark/README.md) for the evaluator contract and report semantics.
+
 ## Status
 
-Phase 1: Building the simulated creator management environment.
+Phase 1: Simulated creator environment and automatic task evaluator.

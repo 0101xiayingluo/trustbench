@@ -1,0 +1,11 @@
+{
+  "name": "trustbench",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "evaluate": "node benchmark/evaluator/cli.mjs",
+    "test": "node --test benchmark/evaluator/*.test.mjs",
+    "test:all": "npm test && npm --prefix apps/creator-studio run build && npm --prefix apps/creator-studio run lint"
+  }
+}
