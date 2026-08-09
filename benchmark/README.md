@@ -79,7 +79,7 @@ benchmark/runs/<task-id>/<run-id>/run.json
 benchmark/runs/<task-id>/<run-id>/report.json
 ```
 
-`run.json` includes the final state, semantic action trace, and a `snapshots` array containing the initial state plus one state snapshot after every plan action. Existing records stored directly under `benchmark/runs/<task-id>/` remain readable.
+`run.json` includes the final state, semantic action trace, complete `planActions`, and a `snapshots` array containing the initial state plus one state snapshot after every plan action. Each non-initial snapshot also records its `planAction`, so replay remains aligned when a step such as `waitFor`, `fill`, or `press` does not emit a semantic application action. Existing records stored directly under `benchmark/runs/<task-id>/` remain readable.
 
 Batch suites use the same record layout so every case appears in the console history:
 
@@ -97,9 +97,9 @@ When the creator app is running, the console uses these endpoints:
 * `GET /api/runs/latest` returns the newest record.
 * `GET /api/tasks` returns registered task definitions and available plans.
 * `GET /api/jobs` returns recent console-triggered Runner jobs.
-* `POST /api/runs` with `{ "taskId": "...", "planId": "..." }` starts a validated Runner job and returns `202`.
+* `POST /api/runs` with `{ "taskId": "...", "planId": "..." }` starts a validated Runner job and returns `202`; a duplicate active task and plan returns `409` with the existing job.
 * `GET /api/suites` returns registered batch suites.
 * `GET /api/batches` returns persisted batch summaries and active batch jobs.
-* `POST /api/batches` with `{ "suiteId": "..." }` starts a validated batch job and returns `202`.
+* `POST /api/batches` with `{ "suiteId": "..." }` starts a validated batch job and returns `202`; a duplicate active suite returns `409` with the existing job.
 
 The console is available at `http://localhost:5173/`; `/sandbox/` remains the task target used by the Runner. The production preview uses port `4173`.

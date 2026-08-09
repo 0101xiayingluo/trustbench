@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import type { Plugin, PreviewServer, ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
-import { spawn } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -72,6 +72,12 @@ type BatchJob = {
 
 const jobs = new Map<string, Job>()
 const batchJobs = new Map<string, BatchJob>()
+const activeProcesses = new Set<ChildProcess>()
+
+async function readableRecords<T>(directories: string[], readRecord: (directory: string) => Promise<T>): Promise<T[]> {
+  const results = await Promise.allSettled(directories.map(readRecord))
+  return results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : [])
+}
 
 async function runDirectories(root: string, depth = 0): Promise<string[]> {
   const entries = await readdir(root, { withFileTypes: true })
@@ -100,8 +106,9 @@ async function allRuns() {
     throw error
   }
 
-  const records = await Promise.all(
-    directories.map(async (directory) => {
+  const records = await readableRecords(
+    directories,
+    async (directory) => {
       const [run, report, metadata] = await Promise.all([
         readFile(resolve(directory, 'run.json'), 'utf8'),
         readFile(resolve(directory, 'report.json'), 'utf8'),
@@ -113,7 +120,7 @@ async function allRuns() {
         run: JSON.parse(run),
         report: JSON.parse(report),
       }
-    }),
+    },
   )
   return records.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
@@ -136,8 +143,9 @@ async function allBatches() {
     if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return []
     throw error
   }
-  const records = await Promise.all(
-    directories.map(async (directory) => {
+  const records = await readableRecords(
+    directories,
+    async (directory) => {
       const path = resolve(directory, 'batch.json')
       const [contents, metadata] = await Promise.all([readFile(path, 'utf8'), stat(path)])
       return {
@@ -145,7 +153,7 @@ async function allBatches() {
         createdAt: metadata.mtime.toISOString(),
         summary: JSON.parse(contents) as BatchSummary,
       }
-    }),
+    },
   )
   return records.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
@@ -283,6 +291,13 @@ async function startRun(request: IncomingMessage, response: ServerResponse) {
     jsonResponse(response, { error: 'Unknown task or plan.' }, 404)
     return
   }
+  const running = [...jobs.values()].find((job) =>
+    job.taskId === task.id && job.planId === plan.id && job.status === 'running'
+  )
+  if (running) {
+    jsonResponse(response, { error: 'This task and plan are already running.', job: running }, 409)
+    return
+  }
 
   const taskFile = task.filePath
   const planFile = resolve(benchmarkPlans, `${plan.id}.json`)
@@ -299,16 +314,21 @@ async function startRun(request: IncomingMessage, response: ServerResponse) {
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
+  activeProcesses.add(child)
   let output = ''
   let diagnostics = ''
   child.stdout.on('data', (chunk) => { output += String(chunk) })
   child.stderr.on('data', (chunk) => { diagnostics += String(chunk) })
   child.once('error', (error) => {
+    activeProcesses.delete(child)
+    if (job.status !== 'running') return
     job.status = 'error'
     job.message = error.message
     job.completedAt = new Date().toISOString()
   })
   child.once('close', (exitCode) => {
+    activeProcesses.delete(child)
+    if (job.status !== 'running') return
     const report = parseRunnerOutput(output)
     job.exitCode = exitCode
     job.completedAt = new Date().toISOString()
@@ -349,16 +369,21 @@ async function startBatch(request: IncomingMessage, response: ServerResponse) {
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
+  activeProcesses.add(child)
   let output = ''
   let diagnostics = ''
   child.stdout.on('data', (chunk) => { output += String(chunk) })
   child.stderr.on('data', (chunk) => { diagnostics += String(chunk) })
   child.once('error', (error) => {
+    activeProcesses.delete(child)
+    if (job.status !== 'running') return
     job.status = 'error'
     job.message = error.message
     job.completedAt = new Date().toISOString()
   })
   child.once('close', (exitCode) => {
+    activeProcesses.delete(child)
+    if (job.status !== 'running') return
     const summary = parseRunnerOutput(output) as BatchSummary | undefined
     job.exitCode = exitCode
     job.completedAt = new Date().toISOString()
@@ -370,6 +395,10 @@ async function startBatch(request: IncomingMessage, response: ServerResponse) {
 }
 
 function runsApi(): Plugin {
+  const stopActiveProcesses = () => {
+    for (const child of activeProcesses) child.kill()
+    activeProcesses.clear()
+  }
   const installMiddleware = (server: ViteDevServer | PreviewServer) => {
     server.middlewares.use('/api/tasks', async (_request, response) => {
       try {
@@ -434,9 +463,11 @@ function runsApi(): Plugin {
     name: 'trustbench-runs-api',
     configureServer(server: ViteDevServer) {
       installMiddleware(server)
+      server.httpServer?.once('close', stopActiveProcesses)
     },
     configurePreviewServer(server: PreviewServer) {
       installMiddleware(server)
+      server.httpServer?.once('close', stopActiveProcesses)
     },
   }
 }

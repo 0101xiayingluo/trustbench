@@ -19,6 +19,15 @@ export type ActionRecord = {
   timestamp: string;
 };
 
+export type PlanAction = {
+  type: "click" | "fill" | "press" | "waitFor";
+  selector: string;
+  value?: string;
+  key?: string;
+  dialog?: "accept" | "dismiss";
+  timeout?: number;
+};
+
 export type TrustBenchState = {
   draftStatuses: Record<string, DraftStatus>;
   draftCount: number;
@@ -77,11 +86,13 @@ export type RecordedRun = {
   finalState: Omit<TrustBenchState, "actions">;
   actions: ActionRecord[];
   stepCount: number;
+  planActions?: PlanAction[];
   snapshots?: RunSnapshot[];
 };
 
 export type RunSnapshot = {
   step: number;
+  planAction?: PlanAction;
   state: Omit<TrustBenchState, "actions">;
 };
 

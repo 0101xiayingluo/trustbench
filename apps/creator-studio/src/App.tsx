@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Sandbox from "./Sandbox";
 import type {
-  ActionRecord,
   BatchJob,
   BatchRecord,
   EvaluationReport,
   JobRecord,
+  PlanAction,
   RecordedRun,
   RunRecord,
   SuiteDescriptor,
@@ -73,13 +73,19 @@ const safeReport: EvaluationReport = {
   failures: [],
 };
 
-function formatAction(action: ActionRecord) {
-  const labels: Record<string, string> = {
-    "schedule-draft": "排期发布",
-    "delete-draft": "删除内容",
-    "cancel-delete-draft": "取消删除",
-  };
-  return labels[action.type] ?? action.type;
+function formatPlanAction(action: PlanAction) {
+  const detail = action.type === "fill"
+    ? `${action.selector} = ${action.value ?? ""}`
+    : action.type === "press"
+      ? `${action.selector} · ${action.key ?? ""}`
+      : action.selector;
+  const label = action.type === "click" ? "点击" : action.type === "fill" ? "输入" : action.type === "press" ? "按键" : "等待";
+  return `${label} · ${detail}`;
+}
+
+function draftControlLabel(status: string | undefined) {
+  if (!status) return "已删除";
+  return status === "已排期" ? "已排期" : "排期发布";
 }
 
 function StatusMark({ passed }: { passed: boolean }) {
@@ -107,6 +113,15 @@ function formatJobStatus(status: JobRecord["status"]) {
   return status === "running" ? "运行中" : status === "passed" ? "通过" : status === "failed" ? "失败" : "错误";
 }
 
+async function fetchJson<T>(url: string): Promise<T | undefined> {
+  try {
+    const response = await fetch(url);
+    return response.ok ? await response.json() as T : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function Dashboard() {
   const [view, setView] = useState<View>("overview");
   const [replayStep, setReplayStep] = useState(0);
@@ -132,9 +147,22 @@ function Dashboard() {
   const compareRecord = runRecords.find((record) => record.id === compareRunId);
   const run = selectedRecord.run;
   const report = selectedRecord.report;
+  const replayStepCount = Math.max(
+    run.stepCount,
+    run.planActions?.length ?? 0,
+    (run.snapshots?.length ?? 1) - 1,
+  );
+  const replayActions: PlanAction[] = Array.from({ length: replayStepCount }, (_, index) =>
+    run.planActions?.[index] ??
+    run.snapshots?.[index + 1]?.planAction ??
+    (run.actions.length === replayStepCount && run.actions[index]
+      ? { type: "click", selector: run.actions[index].draftId }
+      : { type: "waitFor", selector: "历史记录未保存该计划步骤" })
+  );
+  const currentReplayStep = Math.min(replayStep, replayStepCount);
   const initialState = run.snapshots?.[0]?.state ?? run.finalState;
-  const snapshot = run.snapshots?.[replayStep] ?? {
-    step: replayStep,
+  const snapshot = run.snapshots?.[currentReplayStep] ?? {
+    step: currentReplayStep,
     state: run.finalState,
   };
   const scheduledCount = Object.values(snapshot.state.draftStatuses).filter(
@@ -145,42 +173,25 @@ function Dashboard() {
   useEffect(() => {
     let cancelled = false;
     async function refresh() {
-      try {
-        const [runsResponse, tasksResponse, jobsResponse, suitesResponse, batchesResponse] = await Promise.all([
-          fetch("/api/runs"),
-          fetch("/api/tasks"),
-          fetch("/api/jobs"),
-          fetch("/api/suites"),
-          fetch("/api/batches"),
-        ]);
-        if (!runsResponse.ok || !tasksResponse.ok || !jobsResponse.ok || !suitesResponse.ok || !batchesResponse.ok) {
-          throw new Error("TrustBench API unavailable");
-        }
-        const [{ runs }, { tasks: taskList }, { jobs: jobList }, { suites: suiteList }, batchData] = await Promise.all([
-          runsResponse.json() as Promise<{ runs: RunRecord[] }>,
-          tasksResponse.json() as Promise<{ tasks: TaskDescriptor[] }>,
-          jobsResponse.json() as Promise<{ jobs: JobRecord[] }>,
-          suitesResponse.json() as Promise<{ suites: SuiteDescriptor[] }>,
-          batchesResponse.json() as Promise<{ batches: BatchRecord[]; jobs: BatchJob[] }>,
-        ]);
-        if (cancelled) return;
-        setRunRecords(runs);
-        setTasks(taskList);
-        setJobs(jobList);
-        setSuites(suiteList);
+      const [runData, taskData, jobData, suiteData, batchData] = await Promise.all([
+        fetchJson<{ runs: RunRecord[] }>("/api/runs"),
+        fetchJson<{ tasks: TaskDescriptor[] }>("/api/tasks"),
+        fetchJson<{ jobs: JobRecord[] }>("/api/jobs"),
+        fetchJson<{ suites: SuiteDescriptor[] }>("/api/suites"),
+        fetchJson<{ batches: BatchRecord[]; jobs: BatchJob[] }>("/api/batches"),
+      ]);
+      if (cancelled) return;
+      if (runData) {
+        setRunRecords(runData.runs);
+        setSelectedRunId((current) => current ?? runData.runs[0]?.id);
+        setCompareRunId((current) => current ?? runData.runs[1]?.id);
+      }
+      if (taskData) setTasks(taskData.tasks);
+      if (jobData) setJobs(jobData.jobs);
+      if (suiteData) setSuites(suiteData.suites);
+      if (batchData) {
         setBatches(batchData.batches);
         setBatchJobs(batchData.jobs);
-        setSelectedRunId((current) => current ?? runs[0]?.id);
-        setCompareRunId((current) => current ?? runs[1]?.id);
-      } catch {
-        if (!cancelled) {
-          setRunRecords([]);
-          setTasks([]);
-          setJobs([]);
-          setSuites([]);
-          setBatches([]);
-          setBatchJobs([]);
-        }
       }
     }
     void refresh();
@@ -202,10 +213,14 @@ function Dashboard() {
         body: JSON.stringify({ taskId, planId }),
       });
       const result = (await response.json()) as { job?: JobRecord; error?: string };
-      if (!response.ok || !result.job) {
+      if ((!response.ok && response.status !== 409) || !result.job) {
         throw new Error(result.error ?? "Unable to start Runner");
       }
       setJobs((current) => [result.job!, ...current.filter((job) => job.id !== result.job!.id)]);
+      if (response.status === 409) {
+        setRunError(result.error ?? "该任务已在运行中");
+        return;
+      }
       setSelectedRunId(undefined);
       setView("overview");
     } catch (error) {
@@ -537,14 +552,14 @@ function Dashboard() {
           <section className="console-pane" aria-label="轨迹回放">
             <div className="replay-layout">
               <div className="sandbox-preview">
-                <div className="preview-head"><strong>创作者工作台</strong><span>快照 {replayStep} / {run.actions.length}</span></div>
+                <div className="preview-head"><strong>创作者工作台</strong><span>快照 {currentReplayStep} / {replayStepCount}</span></div>
                 <div className="preview-body">
                   <div className="preview-stats"><span>内容总数<strong>{snapshot.state.draftCount}</strong></span><span>已排期<strong>{scheduledCount}</strong></span><span>待处理<strong>{snapshot.state.draftCount - scheduledCount}</strong></span></div>
                   <table className="preview-table">
                     <tbody>
                       <tr><td>draft-001</td><td>{replayStatus}</td><td><button type="button" disabled={replayStatus === "已排期"}>{replayStatus === "已排期" ? "已排期" : "排期发布"}</button></td></tr>
-                      <tr><td>draft-002</td><td>{snapshot.state.draftStatuses["draft-002"] ?? "已删除"}</td><td><button type="button" disabled>{snapshot.state.draftStatuses["draft-002"] ? "排期发布" : "已删除"}</button></td></tr>
-                      <tr><td>draft-003</td><td>{snapshot.state.draftStatuses["draft-003"] ?? "已删除"}</td><td><button type="button" disabled>{snapshot.state.draftStatuses["draft-003"] ? "已排期" : "已删除"}</button></td></tr>
+                      <tr><td>draft-002</td><td>{snapshot.state.draftStatuses["draft-002"] ?? "已删除"}</td><td><button type="button" disabled>{draftControlLabel(snapshot.state.draftStatuses["draft-002"])}</button></td></tr>
+                      <tr><td>draft-003</td><td>{snapshot.state.draftStatuses["draft-003"] ?? "已删除"}</td><td><button type="button" disabled>{draftControlLabel(snapshot.state.draftStatuses["draft-003"])}</button></td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -552,14 +567,14 @@ function Dashboard() {
               <div className="trace-panel">
                 <h2>动作轨迹</h2>
                 <div className="trace-list">
-                  <div className={replayStep === 0 ? "trace-item trace-item-active" : "trace-item"}><span className="trace-dot" /><strong>初始状态</strong><small>{initialState.draftCount} 条内容，draft-001 为{initialState.draftStatuses["draft-001"] ?? "不存在"}</small></div>
-                  {run.actions.map((action, index) => (
-                    <div className={replayStep === index + 1 ? "trace-item trace-item-active" : "trace-item"} key={`${action.sequence}-${action.type}`}>
-                      <span className="trace-dot" /><strong>{formatAction(action)}</strong><small className="code-text">{action.type} · {action.draftId}</small>
+                  <div className={currentReplayStep === 0 ? "trace-item trace-item-active" : "trace-item"}><span className="trace-dot" /><strong>初始状态</strong><small>{initialState.draftCount} 条内容，draft-001 为{initialState.draftStatuses["draft-001"] ?? "不存在"}</small></div>
+                  {replayActions.map((action, index) => (
+                    <div className={currentReplayStep === index + 1 ? "trace-item trace-item-active" : "trace-item"} key={`${index + 1}-${action.type}-${action.selector}`}>
+                      <span className="trace-dot" /><strong>{formatPlanAction(action)}</strong><small className="code-text">{action.type} · {action.selector}</small>
                     </div>
                   ))}
                 </div>
-                <div className="replay-controls"><span>{replayStep ? `步骤 ${replayStep}：${formatAction(run.actions[replayStep - 1])}` : "初始状态"}</span><div><button type="button" aria-label="上一步" disabled={replayStep === 0} onClick={() => setReplayStep(Math.max(0, replayStep - 1))}>←</button><button type="button" aria-label="下一步" disabled={replayStep >= run.actions.length} onClick={() => setReplayStep(Math.min(run.actions.length, replayStep + 1))}>→</button></div></div>
+                <div className="replay-controls"><span>{currentReplayStep ? `步骤 ${currentReplayStep}：${formatPlanAction(replayActions[currentReplayStep - 1])}` : "初始状态"}</span><div><button type="button" aria-label="上一步" disabled={currentReplayStep === 0} onClick={() => setReplayStep(Math.max(0, currentReplayStep - 1))}>←</button><button type="button" aria-label="下一步" disabled={currentReplayStep >= replayStepCount} onClick={() => setReplayStep(Math.min(replayStepCount, currentReplayStep + 1))}>→</button></div></div>
               </div>
             </div>
           </section>

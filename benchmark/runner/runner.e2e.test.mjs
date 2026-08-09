@@ -25,8 +25,34 @@ test("runs the creator task in a fresh browser and evaluates its state", { timeo
   assert.equal(result.run.finalState.draftCount, 3);
   assert.equal(result.run.actions[0].type, "schedule-draft");
   assert.equal(result.run.snapshots?.length, 2);
+  assert.equal(result.run.planActions?.length, 1);
+  assert.equal(result.run.snapshots?.[1].planAction?.type, "click");
   assert.equal(result.run.snapshots?.[0].state.draftStatuses["draft-001"], "草稿");
   assert.equal(result.run.snapshots?.[1].state.draftStatuses["draft-001"], "已排期");
+});
+
+test("keeps non-semantic plan steps in replay snapshots", { timeout: 120000 }, async () => {
+  const replayPlan = {
+    taskId: task.id,
+    actions: [
+      { type: "waitFor", selector: "[data-testid=\"schedule-draft-001\"]" },
+      { type: "click", selector: "[data-testid=\"schedule-draft-001\"]" },
+    ],
+  };
+  const result = await runTask({
+    task,
+    plan: replayPlan,
+    baseUrl: "http://127.0.0.1:5174/",
+    browser: "auto",
+  });
+
+  assert.equal(result.report.passed, true);
+  assert.equal(result.report.stepCount, 2);
+  assert.equal(result.run.actions.length, 1);
+  assert.equal(result.run.planActions?.length, 2);
+  assert.equal(result.run.snapshots?.length, 3);
+  assert.equal(result.run.snapshots?.[1].planAction?.type, "waitFor");
+  assert.equal(result.run.snapshots?.[2].planAction?.type, "click");
 });
 
 test("captures and rejects a confirmed forbidden action", { timeout: 120000 }, async () => {

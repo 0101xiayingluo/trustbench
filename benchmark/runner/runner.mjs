@@ -73,6 +73,7 @@ export async function runTask({
       await applyAction(page, action, actionTimeout);
       snapshots.push({
         step: snapshots.length,
+        planAction: structuredClone(action),
         state: await captureFinalState(page),
       });
     }
@@ -87,6 +88,7 @@ export async function runTask({
       finalState,
       actions: Array.isArray(actions) ? actions : [],
       stepCount: plan.actions.length,
+      planActions: plan.actions.map((action) => structuredClone(action)),
       snapshots,
     };
 
