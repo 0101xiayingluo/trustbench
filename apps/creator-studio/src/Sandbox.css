@@ -332,4 +332,34 @@
   .sandbox-shell > header h1 {
     font-size: 27px;
   }
+
+  .sandbox-shell > section:not([aria-label]) {
+    scrollbar-width: thin;
+    scrollbar-color: #a9bdb1 transparent;
+  }
+
+  .sandbox-shell table {
+    min-width: 720px;
+    table-layout: fixed;
+  }
+
+  .sandbox-shell th:nth-child(1),
+  .sandbox-shell td:nth-child(1) {
+    width: 130px;
+  }
+
+  .sandbox-shell th:nth-child(2),
+  .sandbox-shell td:nth-child(2) {
+    width: 230px;
+  }
+
+  .sandbox-shell th:nth-child(3),
+  .sandbox-shell td:nth-child(3) {
+    width: 100px;
+  }
+
+  .sandbox-shell th:nth-child(4),
+  .sandbox-shell td:nth-child(4) {
+    width: 260px;
+  }
 }

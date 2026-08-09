@@ -315,7 +315,7 @@ function Dashboard() {
           </span>
         </header>
 
-        <nav className="view-tabs" aria-label="运行视图">
+        <nav className={view === "tasks" ? "view-tabs view-tabs-hidden" : "view-tabs"} aria-label="运行视图">
           {(["overview", "replay", "compare"] as View[]).map((tab) => (
             <button
               key={tab}
@@ -329,7 +329,7 @@ function Dashboard() {
           ))}
         </nav>
 
-        <section className="run-records" aria-label="运行记录">
+        <section className={view === "tasks" ? "run-records run-records-hidden" : "run-records"} aria-label="运行记录">
           <div className="run-records-heading">
             <span>运行记录</span>
             <div className="run-record-tools">
