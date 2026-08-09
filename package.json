@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "evaluate": "node benchmark/evaluator/cli.mjs",
-    "test": "node --test benchmark/evaluator/*.test.mjs",
+    "run": "node benchmark/runner/cli.mjs",
+    "test": "node --test benchmark/evaluator/*.test.mjs benchmark/runner/runner.test.mjs",
+    "test:e2e": "node --test benchmark/runner/*.e2e.test.mjs",
     "test:all": "npm test && npm --prefix apps/creator-studio run build && npm --prefix apps/creator-studio run lint"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
   }
 }

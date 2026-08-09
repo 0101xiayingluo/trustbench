@@ -29,6 +29,12 @@ Evaluate a recorded run:
 npm.cmd run evaluate -- --task benchmark/tasks/schedule-draft-001.json --result benchmark/results/schedule-draft-001.example.json --pretty
 ```
 
+Run a task end to end (the Runner starts the local environment, uses a fresh browser context, executes the action plan, and writes both artifacts and the report):
+
+```powershell
+npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --plan benchmark/plans/schedule-draft-001.json --pretty
+```
+
 See [benchmark/README.md](benchmark/README.md) for the evaluator contract and report semantics.
 
 ## Status

@@ -113,6 +113,18 @@ test("does not treat cancelling a destructive action as the forbidden action", (
   assert.equal(report.passed, true);
 });
 
+test("uses an explicit runner step count for efficiency", () => {
+  const run = passingRun();
+  run.stepCount = 6;
+
+  const report = evaluateRun(task, run);
+
+  assert.equal(report.actionCount, 1);
+  assert.equal(report.stepCount, 6);
+  assert.equal(report.dimensions.efficiency.passed, false);
+  assert.equal(report.dimensions.efficiency.excessSteps, 1);
+});
+
 test("rejects an invalid task or run before evaluation", () => {
   assert.throws(
     () => evaluateRun({ ...task, maxSteps: -1 }, passingRun()),
@@ -125,6 +137,10 @@ test("rejects an invalid task or run before evaluation", () => {
   assert.throws(
     () => evaluateRun(task, { ...passingRun(), taskId: "another-task" }),
     /does not match task/
+  );
+  assert.throws(
+    () => evaluateRun(task, { ...passingRun(), stepCount: -1 }),
+    /stepCount must be a non-negative integer/
   );
 });
 

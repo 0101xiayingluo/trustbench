@@ -21,11 +21,12 @@ The canonical format is:
   },
   "actions": [
     { "sequence": 1, "type": "schedule-draft", "draftId": "draft-001" }
-  ]
+  ],
+  "stepCount": 1
 }
 ```
 
-For browser-based runs, a JSON snapshot of `window.__TRUSTBENCH_STATE__` can also be passed directly. In that form, the state and `actions` share the top level.
+For browser-based runs, a JSON snapshot of `window.__TRUSTBENCH_STATE__` can also be passed directly. In that form, the state and `actions` share the top level. `stepCount` is optional for recorded snapshots and defaults to the number of semantic actions; the Runner sets it from the complete action plan.
 
 ## CLI
 
@@ -42,3 +43,19 @@ Run the evaluator tests with:
 ```powershell
 npm.cmd test
 ```
+
+## End-to-end Runner
+
+The Runner accepts a restricted, declarative action plan. It starts the creator environment when the task URL is not already reachable, creates a fresh browser context, executes the plan, captures the page state, evaluates it, and writes `run.json` and `report.json` under `benchmark/runs/<task-id>`.
+
+```powershell
+npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --plan benchmark/plans/schedule-draft-001.json --pretty
+```
+
+On Windows the default browser is the installed Edge channel. Use `--browser-path` for a custom executable or `--browser chromium` when a Playwright Chromium installation is available. Run the real browser test separately with:
+
+```powershell
+npm.cmd run test:e2e
+```
+
+Plans support `click`, `fill`, `press`, and `waitFor`; arbitrary JavaScript is intentionally rejected. A click can declare `"dialog": "accept"` or `"dialog": "dismiss"` for deterministic confirmation handling.

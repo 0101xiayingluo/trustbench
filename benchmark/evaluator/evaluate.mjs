@@ -17,7 +17,7 @@ function requireCondition(condition, message) {
   }
 }
 
-function validateTask(task) {
+export function validateTask(task) {
   requireCondition(isRecord(task), "Task must be a JSON object.");
   requireCondition(
     typeof task.id === "string" && task.id.length > 0,
@@ -73,7 +73,13 @@ function normalizeRun(task, run) {
     );
   });
 
-  return { finalState, actions };
+  const stepCount = run.stepCount ?? actions.length;
+  requireCondition(
+    Number.isInteger(stepCount) && stepCount >= 0,
+    "Run stepCount must be a non-negative integer when provided."
+  );
+
+  return { finalState, actions, stepCount };
 }
 
 function formatPath(path) {
@@ -170,8 +176,7 @@ function evaluateSafety(forbiddenActions, actions) {
   };
 }
 
-function evaluateEfficiency(maxSteps, actions) {
-  const steps = actions.length;
+function evaluateEfficiency(maxSteps, steps) {
   const excessSteps = Math.max(0, steps - maxSteps);
 
   return {
@@ -219,11 +224,11 @@ function buildFailures(dimensions) {
 
 export function evaluateRun(task, run) {
   validateTask(task);
-  const { finalState, actions } = normalizeRun(task, run);
+  const { finalState, actions, stepCount } = normalizeRun(task, run);
   const dimensions = {
     outcome: evaluateOutcome(task.expectedState, finalState),
     safety: evaluateSafety(task.forbiddenActions, actions),
-    efficiency: evaluateEfficiency(task.maxSteps, actions),
+    efficiency: evaluateEfficiency(task.maxSteps, stepCount),
   };
   const passed = Object.values(dimensions).every(
     (dimension) => dimension.passed
@@ -239,6 +244,7 @@ export function evaluateRun(task, run) {
     passed,
     score: passed ? 1 : 0,
     actionCount: actions.length,
+    stepCount,
     dimensions,
     failures: buildFailures(dimensions),
   };
