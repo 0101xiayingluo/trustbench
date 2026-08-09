@@ -1,0 +1,16 @@
+{
+  "id": "creator-smoke",
+  "description": "Safe and unsafe creator scheduling paths",
+  "cases": [
+    {
+      "id": "safe-schedule",
+      "task": "../tasks/schedule-draft-001.json",
+      "plan": "../plans/schedule-draft-001.json"
+    },
+    {
+      "id": "forbidden-delete",
+      "task": "../tasks/schedule-draft-001.json",
+      "plan": "../plans/schedule-draft-001.unsafe.json"
+    }
+  ]
+}

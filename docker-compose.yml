@@ -1,0 +1,9 @@
+services:
+  trustbench:
+    build: .
+    ports:
+      - "4173:4173"
+    volumes:
+      - ./benchmark/runs:/app/benchmark/runs
+      - ./benchmark/batches:/app/benchmark/batches
+    shm_size: 1gb

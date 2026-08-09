@@ -3,12 +3,15 @@ import Sandbox from "./Sandbox";
 import type {
   ActionRecord,
   EvaluationReport,
+  JobRecord,
   RecordedRun,
   RunRecord,
+  TaskDescriptor,
 } from "./types";
 import "./App.css";
 
-type View = "overview" | "replay" | "compare";
+type View = "overview" | "replay" | "compare" | "tasks";
+type RunFilter = "all" | "passed" | "failed";
 
 const safeRun: RecordedRun = {
   taskId: "creator.schedule-draft-001",
@@ -97,12 +100,21 @@ function formatRunDate(value: string) {
   }).format(date);
 }
 
+function formatJobStatus(status: JobRecord["status"]) {
+  return status === "running" ? "运行中" : status === "passed" ? "通过" : status === "failed" ? "失败" : "错误";
+}
+
 function Dashboard() {
   const [view, setView] = useState<View>("overview");
   const [replayStep, setReplayStep] = useState(0);
   const [runRecords, setRunRecords] = useState<RunRecord[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string>();
   const [compareRunId, setCompareRunId] = useState<string>();
+  const [runFilter, setRunFilter] = useState<RunFilter>("all");
+  const [tasks, setTasks] = useState<TaskDescriptor[]>([]);
+  const [jobs, setJobs] = useState<JobRecord[]>([]);
+  const [startingTask, setStartingTask] = useState<string>();
+  const [runError, setRunError] = useState<string>();
   const selectedRecord =
     runRecords.find((record) => record.id === selectedRunId) ?? {
       id: "example/safe",
@@ -124,20 +136,67 @@ function Dashboard() {
   const replayStatus = snapshot.state.draftStatuses["draft-001"] ?? "草稿";
 
   useEffect(() => {
-    fetch("/api/runs")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("No run records available");
+    let cancelled = false;
+    async function refresh() {
+      try {
+        const [runsResponse, tasksResponse, jobsResponse] = await Promise.all([
+          fetch("/api/runs"),
+          fetch("/api/tasks"),
+          fetch("/api/jobs"),
+        ]);
+        if (!runsResponse.ok || !tasksResponse.ok || !jobsResponse.ok) {
+          throw new Error("TrustBench API unavailable");
         }
-        return response.json() as Promise<{ runs: RunRecord[] }>;
-      })
-      .then(({ runs }) => {
+        const [{ runs }, { tasks: taskList }, { jobs: jobList }] = await Promise.all([
+          runsResponse.json() as Promise<{ runs: RunRecord[] }>,
+          tasksResponse.json() as Promise<{ tasks: TaskDescriptor[] }>,
+          jobsResponse.json() as Promise<{ jobs: JobRecord[] }>,
+        ]);
+        if (cancelled) return;
         setRunRecords(runs);
+        setTasks(taskList);
+        setJobs(jobList);
         setSelectedRunId((current) => current ?? runs[0]?.id);
         setCompareRunId((current) => current ?? runs[1]?.id);
-      })
-      .catch(() => setRunRecords([]));
+      } catch {
+        if (!cancelled) {
+          setRunRecords([]);
+          setTasks([]);
+          setJobs([]);
+        }
+      }
+    }
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, []);
+
+  async function startTask(taskId: string, planId: string) {
+    const key = `${taskId}:${planId}`;
+    setStartingTask(key);
+    setRunError(undefined);
+    try {
+      const response = await fetch("/api/runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, planId }),
+      });
+      const result = (await response.json()) as { job?: JobRecord; error?: string };
+      if (!response.ok || !result.job) {
+        throw new Error(result.error ?? "Unable to start Runner");
+      }
+      setJobs((current) => [result.job!, ...current.filter((job) => job.id !== result.job!.id)]);
+      setSelectedRunId(undefined);
+      setView("overview");
+    } catch (error) {
+      setRunError(error instanceof Error ? error.message : "Unable to start Runner");
+    } finally {
+      setStartingTask(undefined);
+    }
+  }
 
   useEffect(() => {
     setReplayStep(0);
@@ -153,6 +212,10 @@ function Dashboard() {
     () => report.dimensions.outcome.checks.filter((check) => !check.passed),
     [report]
   );
+  const visibleRunRecords = useMemo(
+    () => runRecords.filter((record) => runFilter === "all" || record.report.passed === (runFilter === "passed")),
+    [runFilter, runRecords]
+  );
 
   return (
     <main className="console-shell">
@@ -162,16 +225,20 @@ function Dashboard() {
           <span>TrustBench</span>
         </div>
         <nav className="console-nav">
-          <button className="nav-item nav-item-active" type="button">
+          <button className={view === "overview" ? "nav-item nav-item-active" : "nav-item"} type="button" onClick={() => setView("overview")}>
             <span>◉</span>运行记录
           </button>
-          <button className="nav-item" type="button"><span>≡</span>任务集</button>
-          <button className="nav-item" type="button"><span>▣</span>仿真环境</button>
-          <button className="nav-item" type="button"><span>⌁</span>安全策略</button>
+          <button className={view === "tasks" ? "nav-item nav-item-active" : "nav-item"} type="button" onClick={() => setView("tasks")}>
+            <span>≡</span>任务集
+          </button>
+          <a className="nav-item" href="/sandbox/"><span>▣</span>仿真环境</a>
+          <button className={view === "compare" ? "nav-item nav-item-active" : "nav-item"} type="button" onClick={() => setView("compare")}>
+            <span>⌁</span>运行对比
+          </button>
         </nav>
         <div className="sidebar-meta">
           本地评测节点
-          <strong>Runner online</strong>
+          <strong>{jobs.some((job) => job.status === "running") ? "Runner running" : "Runner online"}</strong>
         </div>
       </aside>
 
@@ -204,13 +271,24 @@ function Dashboard() {
         <section className="run-records" aria-label="运行记录">
           <div className="run-records-heading">
             <span>运行记录</span>
-            <span className="section-caption">{runRecords.length} 条</span>
+            <div className="run-record-tools">
+              <span className="section-caption">{visibleRunRecords.length} / {runRecords.length} 条</span>
+              <div className="run-filter" role="group" aria-label="筛选运行结果">
+                {(["all", "passed", "failed"] as RunFilter[]).map((filter) => (
+                  <button type="button" key={filter} className={runFilter === filter ? "run-filter-active" : ""} onClick={() => setRunFilter(filter)}>
+                    {filter === "all" ? "全部" : filter === "passed" ? "通过" : "失败"}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           {runRecords.length === 0 ? (
             <p className="run-records-empty">暂无真实运行记录，当前显示内置示例。</p>
+          ) : visibleRunRecords.length === 0 ? (
+            <p className="run-records-empty">当前筛选条件下没有运行记录。</p>
           ) : (
             <div className="run-record-list">
-              {runRecords.map((record) => (
+              {visibleRunRecords.map((record) => (
                 <button
                   key={record.id}
                   type="button"
@@ -228,6 +306,70 @@ function Dashboard() {
             </div>
           )}
         </section>
+
+        {view === "tasks" && (
+          <section className="console-pane" aria-label="任务集">
+            <div className="section-heading-row">
+              <div>
+                <h2>任务集</h2>
+                <p className="section-caption">选择一个受限计划，Runner 会自动启动环境并写入运行记录。</p>
+              </div>
+              <span className="section-caption">{tasks.length} 个任务</span>
+            </div>
+            {runError && <p className="run-error" role="alert">{runError}</p>}
+            {tasks.length === 0 ? (
+              <div className="task-empty">暂无任务清单，请先在 benchmark/tasks 和 benchmark/plans 中添加 JSON 定义。</div>
+            ) : (
+              <div className="task-grid">
+                {tasks.map((task) => (
+                  <article className="task-card" key={task.id}>
+                    <div className="task-card-heading">
+                      <div>
+                        <span className="task-risk">{task.riskLevel ?? "未分级"}</span>
+                        <h3>{task.id}</h3>
+                      </div>
+                      <span className="task-version">v{task.version ?? "?"}</span>
+                    </div>
+                    <p>{task.instruction}</p>
+                    <div className="task-card-meta"><span>最多 {task.maxSteps} 步</span><span>{task.plans.length} 个计划</span></div>
+                    <div className="task-plan-list">
+                      {task.plans.map((plan) => {
+                        const jobKey = `${task.id}:${plan.id}`;
+                        const running = jobs.some((job) => job.taskId === task.id && job.planId === plan.id && job.status === "running");
+                        return (
+                          <button
+                            className={plan.unsafe ? "task-plan task-plan-risk" : "task-plan"}
+                            type="button"
+                            key={plan.id}
+                            disabled={running || startingTask !== undefined}
+                            onClick={() => void startTask(task.id, plan.id)}
+                          >
+                            <span>{plan.unsafe ? "风险计划" : "安全计划"}</span>
+                            <strong>{running || startingTask === jobKey ? "运行中…" : "启动 Runner"}</strong>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+            <div className="jobs-panel">
+              <div className="section-heading-row"><h2>最近任务</h2><span className="section-caption">自动刷新</span></div>
+              {jobs.length === 0 ? <p className="task-empty">还没有从控制台启动过任务。</p> : (
+                <div className="jobs-list">
+                  {jobs.map((job) => (
+                    <div className="job-row" key={job.id}>
+                      <span className={job.status === "passed" ? "job-status job-status-pass" : job.status === "running" ? "job-status job-status-running" : "job-status job-status-fail"}>{formatJobStatus(job.status)}</span>
+                      <span className="job-id">{job.taskId} · {job.planId}</span>
+                      <span className="job-time">{formatRunDate(job.startedAt)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {view === "overview" && (
           <section className="console-pane" aria-label="运行概览">

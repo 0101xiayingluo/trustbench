@@ -2,10 +2,10 @@
 
 This Vite application serves two local TrustBench surfaces:
 
-- `/` - run overview, trace replay, and safe/risky path comparison
+- `/` - task catalog, Runner jobs, run overview, trace replay, and real-run comparison
 - `/sandbox/` - the isolated creator workspace used by browser benchmark tasks
 
-The development and preview servers expose `/api/runs/latest`, which reads the most recently modified run artifacts from `benchmark/runs`. The console falls back to an embedded example when no local run exists.
+The development and preview servers expose task, job, and run APIs. The console starts validated Runner jobs directly and refreshes `benchmark/runs` history automatically. It falls back to an embedded example when no local run exists.
 
 ## Development
 

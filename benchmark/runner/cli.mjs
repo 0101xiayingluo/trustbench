@@ -1,14 +1,18 @@
 #!/usr/bin/env node
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { EvaluationInputError } from "../evaluator/evaluate.mjs";
+import { generatePlan } from "./agent.mjs";
+import { createRunId, safeTaskDirectory, writeRunArtifacts } from "./records.mjs";
 import { runTask } from "./runner.mjs";
 
 const usage = `Usage:
   npm run run -- --task <task.json> --plan <plan.json> [options]
+  npm run run -- --task <task.json> --agent-command <command> [options]
 
 Options:
+  --agent-command <cmd>    Read {task} JSON on stdin and return a plan JSON object
   --output-dir <dir>       Directory for run.json and report.json
   --base-url <url>         Override the host/port while keeping the task path
   --browser <name>         auto, msedge, chromium, or another Playwright channel
@@ -16,6 +20,7 @@ Options:
   --headed                 Show the browser window
   --server-timeout <ms>    Environment startup/navigation timeout (default: 15000)
   --action-timeout <ms>    Per-action timeout (default: 5000)
+  --agent-timeout <ms>     Agent command timeout (default: 30000)
   --pretty                 Pretty-print the report
   --help                   Show this message
 
@@ -32,12 +37,14 @@ function parseArguments(argv) {
     pretty: false,
     serverTimeout: 15000,
     actionTimeout: 5000,
+    agentTimeout: 30000,
   };
   const values = {
     "--task": "taskPath",
     "-t": "taskPath",
     "--plan": "planPath",
     "-p": "planPath",
+    "--agent-command": "agentCommand",
     "--output-dir": "outputDir",
     "-o": "outputDir",
     "--base-url": "baseUrl",
@@ -45,6 +52,7 @@ function parseArguments(argv) {
     "--browser-path": "browserPath",
     "--server-timeout": "serverTimeout",
     "--action-timeout": "actionTimeout",
+    "--agent-timeout": "agentTimeout",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -74,11 +82,14 @@ function parseArguments(argv) {
     index += 1;
   }
 
-  if (!options.taskPath || !options.planPath) {
-    throw new EvaluationInputError("Both --task and --plan are required.");
+  if (!options.taskPath || (!options.planPath && !options.agentCommand)) {
+    throw new EvaluationInputError("--task and either --plan or --agent-command are required.");
+  }
+  if (options.planPath && options.agentCommand) {
+    throw new EvaluationInputError("Use either --plan or --agent-command, not both.");
   }
 
-  for (const key of ["serverTimeout", "actionTimeout"]) {
+  for (const key of ["serverTimeout", "actionTimeout", "agentTimeout"]) {
     if (!/^\d+$/.test(String(options[key])) || Number(options[key]) <= 0) {
       throw new EvaluationInputError(`${key} must be a positive integer.`);
     }
@@ -115,10 +126,10 @@ async function main() {
       return;
     }
 
-    const [task, plan] = await Promise.all([
-      readJson(options.taskPath, "task"),
-      readJson(options.planPath, "plan"),
-    ]);
+    const task = await readJson(options.taskPath, "task");
+    const plan = options.agentCommand
+      ? await generatePlan({ task, command: options.agentCommand, timeout: options.agentTimeout })
+      : await readJson(options.planPath, "plan");
     const result = await runTask({
       task,
       plan,
@@ -129,32 +140,19 @@ async function main() {
       serverTimeout: options.serverTimeout,
       actionTimeout: options.actionTimeout,
     });
-    const runId = new Date().toISOString().replace(/[:.]/g, "-");
+    const runId = createRunId();
     const outputDir = resolve(
       options.outputDir ??
-        `benchmark/runs/${task.id.replace(/[^a-z0-9_.-]+/gi, "-")}/${runId}`
+        `benchmark/runs/${safeTaskDirectory(task.id)}/${runId}`
     );
-    await mkdir(outputDir, { recursive: true });
-    await Promise.all([
-      writeFile(
-        resolve(outputDir, "run.json"),
-        `${JSON.stringify(result.run, null, options.pretty ? 2 : 0)}\n`,
-        "utf8"
-      ),
-      writeFile(
-        resolve(outputDir, "report.json"),
-        `${JSON.stringify(result.report, null, options.pretty ? 2 : 0)}\n`,
-        "utf8"
-      ),
-    ]);
+    const artifacts = await writeRunArtifacts(result, outputDir, { pretty: options.pretty });
 
     process.stdout.write(
       `${JSON.stringify(
         {
           ...result.report,
           artifacts: {
-            run: resolve(outputDir, "run.json"),
-            report: resolve(outputDir, "report.json"),
+            ...artifacts,
           },
         },
         null,

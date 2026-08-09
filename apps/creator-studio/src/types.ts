@@ -91,3 +91,29 @@ export type RunRecord = {
   run: RecordedRun;
   report: EvaluationReport;
 };
+
+export type TaskDescriptor = {
+  id: string;
+  version: number | null;
+  instruction: string;
+  riskLevel: string | null;
+  maxSteps: number;
+  plans: Array<{
+    id: string;
+    label: string;
+    unsafe: boolean;
+  }>;
+};
+
+export type JobRecord = {
+  id: string;
+  taskId: string;
+  planId: string;
+  status: "running" | "passed" | "failed" | "error";
+  startedAt: string;
+  completedAt?: string;
+  exitCode?: number | null;
+  message?: string;
+  report?: EvaluationReport;
+  artifacts?: { run: string; report: string };
+};

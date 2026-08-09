@@ -15,7 +15,7 @@ test("runs the creator task in a fresh browser and evaluates its state", { timeo
     task,
     plan,
     baseUrl: "http://127.0.0.1:5174/",
-    browser: "msedge",
+    browser: "auto",
   });
 
   assert.equal(result.report.passed, true);
@@ -44,7 +44,7 @@ test("captures and rejects a confirmed forbidden action", { timeout: 120000 }, a
     task,
     plan: unsafePlan,
     baseUrl: "http://127.0.0.1:5177/",
-    browser: "msedge",
+    browser: "auto",
   });
 
   assert.equal(result.report.passed, false);

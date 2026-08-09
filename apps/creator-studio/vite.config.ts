@@ -1,11 +1,43 @@
 import { defineConfig } from 'vite'
 import type { Plugin, PreviewServer, ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
+import { spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { readdir, readFile, stat } from 'node:fs/promises'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const benchmarkRuns = fileURLToPath(new URL('../../benchmark/runs/', import.meta.url))
+const benchmarkTasks = fileURLToPath(new URL('../../benchmark/tasks/', import.meta.url))
+const benchmarkPlans = fileURLToPath(new URL('../../benchmark/plans/', import.meta.url))
+const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url))
+const runnerCli = resolve(repositoryRoot, 'benchmark/runner/cli.mjs')
+
+type TaskDescriptor = {
+  id: string
+  version: number | null
+  instruction: string
+  riskLevel: string | null
+  maxSteps: number
+  plans: Array<{ id: string; label: string; unsafe: boolean }>
+  filePath: string
+}
+
+type Job = {
+  id: string
+  taskId: string
+  planId: string
+  status: 'running' | 'passed' | 'failed' | 'error'
+  startedAt: string
+  completedAt?: string
+  exitCode?: number | null
+  message?: string
+  report?: unknown
+  artifacts?: { run: string; report: string }
+}
+
+const jobs = new Map<string, Job>()
 
 async function runDirectories(root: string, depth = 0): Promise<string[]> {
   const entries = await readdir(root, { withFileTypes: true })
@@ -52,8 +84,165 @@ async function allRuns() {
   return records.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
+async function readDirectoryFiles(root: string) {
+  try {
+    return await readdir(root, { withFileTypes: true })
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return []
+    }
+    throw error
+  }
+}
+
+async function taskCatalog(): Promise<TaskDescriptor[]> {
+  const [taskEntries, planEntries] = await Promise.all([
+    readDirectoryFiles(benchmarkTasks),
+    readDirectoryFiles(benchmarkPlans),
+  ])
+  const plansByTask = new Map<string, TaskDescriptor['plans']>()
+  const planTaskIds = await Promise.all(
+    planEntries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map(async (entry) => {
+        try {
+          const plan = JSON.parse(await readFile(resolve(benchmarkPlans, entry.name), 'utf8'))
+          return { entry, taskId: typeof plan.taskId === 'string' ? plan.taskId : undefined }
+        } catch {
+          return { entry, taskId: undefined }
+        }
+      }),
+  )
+  for (const { entry, taskId } of planTaskIds) {
+    if (!taskId) continue
+    const plans = plansByTask.get(taskId) ?? []
+    const id = entry.name.replace(/\.json$/i, '')
+    plans.push({ id, label: id.replace(/[-_.]+/g, ' '), unsafe: id.includes('unsafe') })
+    plansByTask.set(taskId, plans)
+  }
+
+  const tasks = await Promise.all(
+    taskEntries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map(async (entry) => {
+        const filePath = resolve(benchmarkTasks, entry.name)
+        const task = JSON.parse(await readFile(filePath, 'utf8'))
+        const plans = (plansByTask.get(task.id) ?? []).sort((a, b) => Number(a.unsafe) - Number(b.unsafe) || a.id.localeCompare(b.id))
+        return {
+          id: task.id,
+          version: typeof task.version === 'number' ? task.version : null,
+          instruction: typeof task.instruction === 'string' ? task.instruction : '',
+          riskLevel: typeof task.riskLevel === 'string' ? task.riskLevel : null,
+          maxSteps: task.maxSteps,
+          plans,
+          filePath,
+        }
+      }),
+  )
+  return tasks.sort((a, b) => a.id.localeCompare(b.id))
+}
+
+function publicTask(task: TaskDescriptor) {
+  const { filePath: _filePath, ...descriptor } = task
+  return descriptor
+}
+
+function jsonResponse(response: ServerResponse, payload: unknown, statusCode = 200) {
+  response.statusCode = statusCode
+  response.setHeader('Content-Type', 'application/json; charset=utf-8')
+  response.end(JSON.stringify(payload))
+}
+
+async function requestBody(request: IncomingMessage) {
+  let body = ''
+  for await (const chunk of request) {
+    body += String(chunk)
+    if (body.length > 1_000_000) throw new Error('Request body is too large.')
+  }
+  if (!body) return {}
+  try {
+    return JSON.parse(body)
+  } catch {
+    throw new Error('Request body must be valid JSON.')
+  }
+}
+
+function parseRunnerOutput(output: string) {
+  const lines = output.trim().split(/\r?\n/).reverse()
+  for (const line of lines) {
+    try {
+      const parsed = JSON.parse(line)
+      if (parsed && typeof parsed === 'object' && 'passed' in parsed) return parsed
+    } catch {
+      // Runner output is machine-readable; ignore non-JSON diagnostic lines.
+    }
+  }
+  return undefined
+}
+
+async function startRun(request: IncomingMessage, response: ServerResponse) {
+  const payload = await requestBody(request)
+  if (!payload || typeof payload !== 'object' || typeof payload.taskId !== 'string' || typeof payload.planId !== 'string') {
+    jsonResponse(response, { error: 'taskId and planId are required.' }, 400)
+    return
+  }
+  const tasks = await taskCatalog()
+  const task = tasks.find((entry) => entry.id === payload.taskId)
+  const plan = task?.plans.find((entry) => entry.id === payload.planId)
+  if (!task || !plan) {
+    jsonResponse(response, { error: 'Unknown task or plan.' }, 404)
+    return
+  }
+
+  const taskFile = task.filePath
+  const planFile = resolve(benchmarkPlans, `${plan.id}.json`)
+  const job: Job = {
+    id: randomUUID(),
+    taskId: task.id,
+    planId: plan.id,
+    status: 'running',
+    startedAt: new Date().toISOString(),
+  }
+  jobs.set(job.id, job)
+  const child = spawn(process.execPath, [runnerCli, '--task', taskFile, '--plan', planFile], {
+    cwd: repositoryRoot,
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  let output = ''
+  let diagnostics = ''
+  child.stdout.on('data', (chunk) => { output += String(chunk) })
+  child.stderr.on('data', (chunk) => { diagnostics += String(chunk) })
+  child.once('error', (error) => {
+    job.status = 'error'
+    job.message = error.message
+    job.completedAt = new Date().toISOString()
+  })
+  child.once('close', (exitCode) => {
+    const report = parseRunnerOutput(output)
+    job.exitCode = exitCode
+    job.completedAt = new Date().toISOString()
+    job.report = report
+    job.artifacts = report?.artifacts
+    job.message = report ? undefined : diagnostics.trim().slice(-1000) || 'Runner did not return a report.'
+    job.status = exitCode === 0 ? 'passed' : exitCode === 1 && report ? 'failed' : 'error'
+  })
+  jsonResponse(response, { job }, 202)
+}
+
 function runsApi(): Plugin {
   const installMiddleware = (server: ViteDevServer | PreviewServer) => {
+    server.middlewares.use('/api/tasks', async (_request, response) => {
+      try {
+        jsonResponse(response, { tasks: (await taskCatalog()).map(publicTask) })
+      } catch (error) {
+        jsonResponse(response, { error: error instanceof Error ? error.message : 'Unknown error' }, 500)
+      }
+    })
+    server.middlewares.use('/api/jobs', (_request, response) => {
+      const recentJobs = [...jobs.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 50)
+      jsonResponse(response, { jobs: recentJobs })
+    })
     server.middlewares.use('/api/runs/latest', async (_request, response) => {
       try {
         const result = (await allRuns())[0]
@@ -63,20 +252,22 @@ function runsApi(): Plugin {
           return
         }
 
-        response.setHeader('Content-Type', 'application/json')
+        response.setHeader('Content-Type', 'application/json; charset=utf-8')
         response.end(JSON.stringify(result))
       } catch (error) {
         response.statusCode = 500
         response.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }))
       }
     })
-    server.middlewares.use('/api/runs', async (_request, response) => {
+    server.middlewares.use('/api/runs', async (request, response) => {
       try {
-        response.setHeader('Content-Type', 'application/json')
-        response.end(JSON.stringify({ runs: await allRuns() }))
+        if (request.method === 'POST') {
+          await startRun(request, response)
+          return
+        }
+        jsonResponse(response, { runs: await allRuns() })
       } catch (error) {
-        response.statusCode = 500
-        response.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }))
+        jsonResponse(response, { error: error instanceof Error ? error.message : 'Unknown error' }, 500)
       }
     })
   }

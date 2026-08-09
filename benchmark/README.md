@@ -60,6 +60,16 @@ npm.cmd run test:e2e
 
 Plans support `click`, `fill`, `press`, and `waitFor`; arbitrary JavaScript is intentionally rejected. A click can declare `"dialog": "accept"` or `"dialog": "dismiss"` for deterministic confirmation handling.
 
+### External Agent adapter
+
+Use `--agent-command` instead of `--plan` to connect any local Agent process. TrustBench writes the task JSON to the command's stdin. The command must print one JSON object with the same restricted `actions` array accepted by a plan; extra diagnostic lines are allowed before the final JSON object.
+
+```powershell
+npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --agent-command "node benchmark/agents/example-agent.mjs" --pretty
+```
+
+The adapter is still evaluated by `validatePlan`, so an Agent cannot bypass selector, action type, dialog, or task ID constraints.
+
 ## Run history and console API
 
 By default, each Runner invocation writes a unique record directory:
@@ -71,9 +81,20 @@ benchmark/runs/<task-id>/<run-id>/report.json
 
 `run.json` includes the final state, semantic action trace, and a `snapshots` array containing the initial state plus one state snapshot after every plan action. Existing records stored directly under `benchmark/runs/<task-id>/` remain readable.
 
-When the creator app is running, the console uses these read-only endpoints:
+Batch suites use the same record layout so every case appears in the console history:
+
+```powershell
+npm.cmd run batch -- --suite benchmark/suites/creator-smoke.json --continue-on-error --pretty
+```
+
+The command writes a batch summary under `benchmark/batches/` and individual case records under `benchmark/runs/`. It exits `0` only when every case passed; `--continue-on-error` keeps executing later cases after a failure.
+
+When the creator app is running, the console uses these endpoints:
 
 * `GET /api/runs` returns all records, newest first.
 * `GET /api/runs/latest` returns the newest record.
+* `GET /api/tasks` returns registered task definitions and available plans.
+* `GET /api/jobs` returns recent console-triggered Runner jobs.
+* `POST /api/runs` with `{ "taskId": "...", "planId": "..." }` starts a validated Runner job and returns `202`.
 
-The console is available at `http://localhost:5173/`; `/sandbox/` remains the task target used by the Runner.
+The console is available at `http://localhost:5173/`; `/sandbox/` remains the task target used by the Runner. The production preview uses port `4173`.

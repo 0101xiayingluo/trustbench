@@ -93,7 +93,8 @@ button {
   border-radius: 5px;
   color: #c7d3cb;
   background: transparent;
-  cursor: default;
+  cursor: pointer;
+  text-decoration: none;
   text-align: left;
 }
 
@@ -235,6 +236,41 @@ button {
   font-weight: 650;
 }
 
+.run-record-tools,
+.run-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.run-filter {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--console-border);
+  border-radius: 5px;
+}
+
+.run-filter button {
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 0;
+  border-right: 1px solid var(--console-border);
+  color: var(--console-muted);
+  background: var(--console-surface);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.run-filter button:last-child {
+  border-right: 0;
+}
+
+.run-filter .run-filter-active {
+  color: var(--console-green);
+  background: var(--console-green-soft);
+  font-weight: 650;
+}
+
 .run-records-empty {
   margin: 0 0 13px;
   color: var(--console-muted);
@@ -299,6 +335,162 @@ button {
 
 .run-record-dot-fail {
   background: var(--console-red);
+}
+
+.task-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.task-card {
+  display: grid;
+  gap: 15px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--console-border);
+  border-radius: 6px;
+  background: var(--console-surface-subtle);
+}
+
+.task-card-heading,
+.task-card-meta,
+.job-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.task-card-heading h3 {
+  margin: 5px 0 0;
+  overflow: hidden;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-card p {
+  min-height: 42px;
+  margin: 0;
+  color: var(--console-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.task-risk,
+.task-version,
+.task-card-meta,
+.job-time {
+  color: var(--console-muted);
+  font-size: 11px;
+}
+
+.task-risk {
+  color: var(--console-green);
+  text-transform: uppercase;
+}
+
+.task-plan-list {
+  display: grid;
+  gap: 7px;
+}
+
+.task-plan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--console-border);
+  border-radius: 5px;
+  color: var(--console-text);
+  background: var(--console-surface);
+  cursor: pointer;
+  text-align: left;
+}
+
+.task-plan:hover:not(:disabled) {
+  border-color: #8dbca0;
+}
+
+.task-plan:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.task-plan strong {
+  color: var(--console-green);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.task-plan-risk strong {
+  color: var(--console-red);
+}
+
+.task-empty,
+.run-error {
+  margin: 16px 0 0;
+  padding: 14px;
+  border: 1px dashed var(--console-border);
+  color: var(--console-muted);
+  font-size: 13px;
+}
+
+.run-error {
+  border-style: solid;
+  border-color: #efb6b0;
+  color: var(--console-red);
+  background: var(--console-red-soft);
+}
+
+.jobs-panel {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--console-border);
+}
+
+.jobs-list {
+  display: grid;
+  gap: 8px;
+}
+
+.job-row {
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--console-border);
+}
+
+.job-status {
+  flex: 0 0 44px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.job-status-pass {
+  color: var(--console-green);
+}
+
+.job-status-running {
+  color: #9a6700;
+}
+
+.job-status-fail {
+  color: var(--console-red);
+}
+
+.job-id {
+  min-width: 0;
+  overflow: hidden;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .console-pane {
@@ -808,6 +1000,11 @@ button {
   .run-records {
     padding-right: 18px;
     padding-left: 18px;
+  }
+
+  .run-records-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .view-tab {
