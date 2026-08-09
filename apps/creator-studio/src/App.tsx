@@ -290,7 +290,7 @@ function Dashboard() {
         </div>
         <nav className="console-nav">
           <button className={view === "overview" ? "nav-item nav-item-active" : "nav-item"} type="button" onClick={() => setView("overview")}>
-            <span>◉</span>运行记录
+            <span>◉</span>运行详情
           </button>
           <button className={view === "tasks" ? "nav-item nav-item-active" : "nav-item"} type="button" onClick={() => setView("tasks")}>
             <span>≡</span>任务集
