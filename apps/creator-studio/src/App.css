@@ -189,6 +189,11 @@ button {
   background: var(--console-red-soft);
 }
 
+.run-status-running {
+  color: var(--console-amber);
+  background: var(--console-amber-soft);
+}
+
 .view-tabs {
   display: flex;
   gap: 25px;
@@ -1077,5 +1082,355 @@ button {
 
   .preview-stats strong {
     margin: 0;
+  }
+}
+
+/* Visual refresh: quiet operations UI with stronger result hierarchy. */
+:root {
+  --console-bg: #f2f5f3;
+  --console-surface: #ffffff;
+  --console-surface-subtle: #f8faf9;
+  --console-sidebar: #10231a;
+  --console-sidebar-active: #214b36;
+  --console-text: #14221a;
+  --console-muted: #687970;
+  --console-border: #dfe8e1;
+  --console-green: #147a52;
+  --console-green-soft: #e7f5ec;
+  --console-red: #b6453c;
+  --console-red-soft: #fff0ee;
+  --console-amber: #a66d18;
+  --console-amber-soft: #fff7e6;
+  --console-blue: #527487;
+  --console-shadow: 0 10px 28px rgba(24, 46, 33, 0.08);
+}
+
+body {
+  background: var(--console-bg);
+}
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(82, 116, 135, 0.32);
+  outline-offset: 2px;
+}
+
+.console-shell {
+  background: var(--console-bg);
+}
+
+.console-sidebar {
+  border-right: 1px solid #1f3a2c;
+  box-shadow: 8px 0 24px rgba(16, 35, 26, 0.08);
+}
+
+.console-brand {
+  letter-spacing: 0.01em;
+}
+
+.brand-mark {
+  border-color: #6f9b80;
+  color: #9be4b6;
+  background: rgba(142, 220, 171, 0.08);
+}
+
+.nav-item {
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.nav-item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(2px);
+}
+
+.nav-item-active:hover {
+  background: var(--console-sidebar-active);
+}
+
+.console-main {
+  background: var(--console-surface);
+}
+
+.console-topbar {
+  padding-top: 31px;
+  padding-bottom: 24px;
+  background: #fbfcfb;
+}
+
+.eyebrow {
+  color: var(--console-blue);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.console-topbar h1 {
+  font-size: 27px;
+  letter-spacing: 0;
+}
+
+.run-status {
+  border: 0;
+  box-shadow: 0 2px 8px rgba(24, 46, 33, 0.06);
+}
+
+.view-tabs {
+  gap: 28px;
+  background: var(--console-surface);
+}
+
+.view-tab {
+  color: #718078;
+  font-size: 13px;
+  transition: color 160ms ease;
+}
+
+.view-tab:hover {
+  color: var(--console-text);
+}
+
+.view-tab-active::after {
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+}
+
+.run-records {
+  padding-top: 17px;
+  background: #f6f9f7;
+}
+
+.run-records-heading {
+  margin-bottom: 11px;
+  color: #46584d;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.run-record-list {
+  gap: 10px;
+  padding-bottom: 16px;
+}
+
+.run-record {
+  flex-basis: 224px;
+  padding: 12px 13px;
+  border-color: #d8e3da;
+  border-radius: 7px;
+  box-shadow: 0 2px 8px rgba(24, 46, 33, 0.035);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.run-record:hover {
+  border-color: #a4c6b0;
+  box-shadow: var(--console-shadow);
+  transform: translateY(-1px);
+}
+
+.run-record-active {
+  border-color: #74ad89;
+  box-shadow: inset 0 -3px 0 var(--console-green), 0 4px 14px rgba(20, 122, 82, 0.1);
+}
+
+.run-record-result {
+  font-weight: 650;
+}
+
+.run-filter button {
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.run-filter button:hover {
+  color: var(--console-text);
+  background: #f1f6f2;
+}
+
+.console-pane {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-top: 30px;
+}
+
+.console-pane h2 {
+  color: #24362b;
+  font-size: 17px;
+}
+
+.metrics-grid {
+  gap: 12px;
+  margin-bottom: 32px;
+  border: 0;
+}
+
+.metric-item {
+  padding: 19px 20px;
+  border: 1px solid var(--console-border);
+  border-radius: 8px;
+  background: var(--console-surface);
+  box-shadow: 0 3px 12px rgba(24, 46, 33, 0.04);
+}
+
+.metric-item:last-child {
+  border-right: 1px solid var(--console-border);
+}
+
+.metric-label {
+  color: #6a7b71;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  margin: 7px 0 4px;
+  font-size: 25px;
+  letter-spacing: 0;
+}
+
+.metric-note {
+  color: var(--console-muted);
+}
+
+.pipeline {
+  margin-top: 20px;
+  margin-bottom: 34px;
+}
+
+.pipeline-stage {
+  color: #52645a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pipeline-stage::before {
+  height: 3px;
+  border-radius: 3px;
+  background: #b9d8c3;
+}
+
+.pipeline-mark {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--console-surface);
+  box-shadow: 0 0 0 1px #8ec19e;
+}
+
+.results-table {
+  overflow: hidden;
+  border: 1px solid var(--console-border);
+  border-radius: 8px;
+}
+
+.results-table th,
+.results-table td {
+  padding: 14px 13px;
+}
+
+.results-table th {
+  color: #607168;
+  background: #f5f8f6;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.results-table tbody tr {
+  transition: background 160ms ease;
+}
+
+.results-table tbody tr:hover {
+  background: #fbfdfb;
+}
+
+.sandbox-preview,
+.trace-panel,
+.compare-summary,
+.compare-empty {
+  border-color: var(--console-border);
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgba(24, 46, 33, 0.04);
+}
+
+.sandbox-preview,
+.trace-panel {
+  background: #fbfcfb;
+}
+
+.preview-head {
+  background: #f5f8f6;
+}
+
+.trace-panel {
+  padding: 18px;
+}
+
+.trace-panel h2 {
+  margin-bottom: 18px;
+}
+
+.trace-item-active .trace-dot {
+  border-color: var(--console-green);
+  background: var(--console-green);
+  box-shadow: 0 0 0 4px var(--console-green-soft);
+}
+
+.task-card {
+  border-color: #d8e5db;
+  background: #fbfdfb;
+  box-shadow: 0 4px 14px rgba(24, 46, 33, 0.04);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.task-card:hover {
+  border-color: #a7c8b1;
+  box-shadow: var(--console-shadow);
+  transform: translateY(-2px);
+}
+
+.task-risk {
+  color: var(--console-amber);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.task-plan-risk {
+  border-color: #f0d3c9;
+  background: #fffaf8;
+}
+
+.task-plan-risk strong {
+  color: var(--console-red);
+}
+
+.job-row {
+  padding: 12px 13px;
+  border: 1px solid var(--console-border);
+  border-radius: 6px;
+  background: var(--console-surface);
+}
+
+.job-status-running {
+  color: var(--console-amber);
+}
+
+.console-footer {
+  background: #fbfcfb;
+}
+
+@media (max-width: 620px) {
+  .console-topbar {
+    padding-top: 24px;
+  }
+
+  .console-pane {
+    padding-top: 24px;
+  }
+
+  .task-card:hover {
+    transform: none;
   }
 }

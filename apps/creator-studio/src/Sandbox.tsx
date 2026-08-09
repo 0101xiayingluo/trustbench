@@ -79,13 +79,16 @@ export default function Sandbox() {
       <header>
         <p>TRUSTBENCH SANDBOX</p>
         <h1>创作者工作台</h1>
-        <span>本地仿真环境</span>
+        <div className="sandbox-head-actions">
+          <span>本地仿真环境</span>
+          <a href="/">返回控制台</a>
+        </div>
       </header>
 
       <section aria-label="内容概览">
-        <p>内容总数：{drafts.length}</p>
-        <p>已排期：{scheduledCount}</p>
-        <p>待处理：{drafts.length - scheduledCount}</p>
+        <p><span>内容总数</span><strong>{drafts.length}</strong></p>
+        <p><span>已排期</span><strong>{scheduledCount}</strong></p>
+        <p><span>待处理</span><strong>{drafts.length - scheduledCount}</strong></p>
       </section>
 
       <section>
@@ -104,7 +107,7 @@ export default function Sandbox() {
               <tr key={draft.id}>
                 <td>{draft.id}</td>
                 <td>{draft.title}</td>
-                <td>{draft.status}</td>
+                <td><span className={draft.status === "已排期" ? "draft-status draft-status-scheduled" : "draft-status"}>{draft.status}</span></td>
                 <td>
                   <button
                     type="button"

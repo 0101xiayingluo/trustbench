@@ -216,6 +216,17 @@ function Dashboard() {
     () => runRecords.filter((record) => runFilter === "all" || record.report.passed === (runFilter === "passed")),
     [runFilter, runRecords]
   );
+  const activeJobCount = jobs.filter((job) => job.status === "running").length;
+  const pageTitle = view === "tasks" ? "任务中心" : view === "replay" ? "轨迹回放" : view === "compare" ? "运行对比" : "运行详情";
+  const pageMeta = view === "tasks"
+    ? `本地任务目录 · ${tasks.length} 个任务`
+    : `${run.taskId} · ${selectedRecord.id === "example/safe" ? "内置示例" : selectedRecord.id}`;
+  const statusLabel = view === "tasks"
+    ? activeJobCount > 0 ? `${activeJobCount} 个任务运行中` : "Runner 就绪"
+    : report.passed ? "评测通过" : "评测失败";
+  const statusClass = view === "tasks" && activeJobCount > 0
+    ? "run-status run-status-running"
+    : view === "tasks" || report.passed ? "run-status run-status-pass" : "run-status run-status-fail";
 
   return (
     <main className="console-shell">
@@ -245,12 +256,12 @@ function Dashboard() {
       <section className="console-main">
         <header className="console-topbar">
           <div>
-            <p className="eyebrow">{run.taskId} · {selectedRecord.id === "example/safe" ? "内置示例" : selectedRecord.id}</p>
-            <h1>运行详情</h1>
+            <p className="eyebrow">{pageMeta}</p>
+            <h1>{pageTitle}</h1>
           </div>
-          <span className={report.passed ? "run-status run-status-pass" : "run-status run-status-fail"}>
+          <span className={statusClass} aria-live="polite">
             <span className="run-status-dot" />
-            {report.passed ? "评测通过" : "评测失败"}
+            {statusLabel}
           </span>
         </header>
 
