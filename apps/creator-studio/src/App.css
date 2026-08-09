@@ -349,6 +349,142 @@ button {
   margin-top: 18px;
 }
 
+.suite-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.suite-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #d8e5db;
+  border-radius: 8px;
+  background: #fbfdfb;
+  box-shadow: 0 4px 14px rgba(24, 46, 33, 0.04);
+}
+
+.suite-card-copy {
+  min-width: 0;
+}
+
+.suite-card-copy > span {
+  color: var(--console-blue);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.suite-card h3 {
+  margin: 5px 0 6px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 15px;
+}
+
+.suite-card p {
+  margin: 0;
+  color: var(--console-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.suite-card button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid var(--console-green);
+  border-radius: 6px;
+  color: #ffffff;
+  background: var(--console-green);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.suite-card button:hover:not(:disabled) {
+  background: #0f6845;
+}
+
+.suite-card button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.batch-history-panel,
+.task-catalog-heading {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--console-border);
+}
+
+.batch-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.batch-history-row {
+  display: grid;
+  grid-template-columns: 46px minmax(150px, 1fr) minmax(120px, auto) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 13px;
+  border: 1px solid var(--console-border);
+  border-radius: 6px;
+  background: var(--console-surface);
+  font-size: 12px;
+}
+
+.batch-history-row strong {
+  overflow: hidden;
+  font-family: ui-monospace, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-history-row > span:not(.batch-result),
+.batch-history-row time {
+  color: var(--console-muted);
+}
+
+.batch-result {
+  font-weight: 700;
+}
+
+.batch-result-pass {
+  color: var(--console-green);
+}
+
+.batch-result-fail {
+  color: var(--console-red);
+}
+
+@media (max-width: 620px) {
+  .suite-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .suite-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .batch-history-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .batch-history-row > span:not(.batch-result),
+  .batch-history-row time {
+    grid-column: 2;
+  }
+}
+
 .task-card {
   display: grid;
   gap: 15px;

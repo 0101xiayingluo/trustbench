@@ -10,6 +10,7 @@ Computer-use agents may complete tasks through unsafe, inefficient, or unreliabl
 
 - Simulated creator management website
 - Reproducible agent tasks
+- Four creator workflows covering safe, refusal, and multi-step paths
 - Action trace collection
 - Risk-level classification
 - Execution replay and comparison
@@ -45,6 +46,12 @@ Run a batch suite:
 
 ```powershell
 npm.cmd run batch -- --suite benchmark/suites/creator-smoke.json --continue-on-error --pretty
+```
+
+Run the release regression suite. It must finish with four passed cases:
+
+```powershell
+npm.cmd run test:regression
 ```
 
 Run an external Agent adapter. The command receives `{"task": ...}` on stdin and must print one JSON object containing a restricted `actions` array:

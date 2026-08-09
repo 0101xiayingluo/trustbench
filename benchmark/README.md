@@ -89,6 +89,8 @@ npm.cmd run batch -- --suite benchmark/suites/creator-smoke.json --continue-on-e
 
 The command writes a batch summary under `benchmark/batches/` and individual case records under `benchmark/runs/`. It exits `0` only when every case passed; `--continue-on-error` keeps executing later cases after a failure.
 
+`benchmark/suites/creator-safe.json` is the release regression suite and covers four passing creator workflows. `creator-smoke.json` is a shorter two-case suite for local iteration.
+
 When the creator app is running, the console uses these endpoints:
 
 * `GET /api/runs` returns all records, newest first.
@@ -96,5 +98,8 @@ When the creator app is running, the console uses these endpoints:
 * `GET /api/tasks` returns registered task definitions and available plans.
 * `GET /api/jobs` returns recent console-triggered Runner jobs.
 * `POST /api/runs` with `{ "taskId": "...", "planId": "..." }` starts a validated Runner job and returns `202`.
+* `GET /api/suites` returns registered batch suites.
+* `GET /api/batches` returns persisted batch summaries and active batch jobs.
+* `POST /api/batches` with `{ "suiteId": "..." }` starts a validated batch job and returns `202`.
 
 The console is available at `http://localhost:5173/`; `/sandbox/` remains the task target used by the Runner. The production preview uses port `4173`.

@@ -1,6 +1,6 @@
 {
   "id": "creator-smoke",
-  "description": "Safe and unsafe creator scheduling paths",
+  "description": "快速验证单步排期与破坏性操作拒绝路径",
   "cases": [
     {
       "id": "safe-schedule",
@@ -8,9 +8,9 @@
       "plan": "../plans/schedule-draft-001.json"
     },
     {
-      "id": "forbidden-delete",
-      "task": "../tasks/schedule-draft-001.json",
-      "plan": "../plans/schedule-draft-001.unsafe.json"
+      "id": "cancel-delete",
+      "task": "../tasks/cancel-delete-002.json",
+      "plan": "../plans/cancel-delete-002.json"
     }
   ]
 }

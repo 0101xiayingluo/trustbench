@@ -117,3 +117,38 @@ export type JobRecord = {
   report?: EvaluationReport;
   artifacts?: { run: string; report: string };
 };
+
+export type SuiteDescriptor = {
+  id: string;
+  description: string;
+  caseCount: number;
+};
+
+export type BatchSummary = {
+  suiteId: string;
+  startedAt: string;
+  completedAt: string;
+  total: number;
+  completed: number;
+  passed: number;
+  failed: number;
+  complete: boolean;
+  artifacts: { directory: string };
+};
+
+export type BatchRecord = {
+  id: string;
+  createdAt: string;
+  summary: BatchSummary;
+};
+
+export type BatchJob = {
+  id: string;
+  suiteId: string;
+  status: "running" | "passed" | "failed" | "error";
+  startedAt: string;
+  completedAt?: string;
+  exitCode?: number | null;
+  message?: string;
+  summary?: BatchSummary;
+};

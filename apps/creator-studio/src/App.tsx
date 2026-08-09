@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import Sandbox from "./Sandbox";
 import type {
   ActionRecord,
+  BatchJob,
+  BatchRecord,
   EvaluationReport,
   JobRecord,
   RecordedRun,
   RunRecord,
+  SuiteDescriptor,
   TaskDescriptor,
 } from "./types";
 import "./App.css";
@@ -113,7 +116,11 @@ function Dashboard() {
   const [runFilter, setRunFilter] = useState<RunFilter>("all");
   const [tasks, setTasks] = useState<TaskDescriptor[]>([]);
   const [jobs, setJobs] = useState<JobRecord[]>([]);
+  const [suites, setSuites] = useState<SuiteDescriptor[]>([]);
+  const [batches, setBatches] = useState<BatchRecord[]>([]);
+  const [batchJobs, setBatchJobs] = useState<BatchJob[]>([]);
   const [startingTask, setStartingTask] = useState<string>();
+  const [startingSuite, setStartingSuite] = useState<string>();
   const [runError, setRunError] = useState<string>();
   const selectedRecord =
     runRecords.find((record) => record.id === selectedRunId) ?? {
@@ -139,23 +146,30 @@ function Dashboard() {
     let cancelled = false;
     async function refresh() {
       try {
-        const [runsResponse, tasksResponse, jobsResponse] = await Promise.all([
+        const [runsResponse, tasksResponse, jobsResponse, suitesResponse, batchesResponse] = await Promise.all([
           fetch("/api/runs"),
           fetch("/api/tasks"),
           fetch("/api/jobs"),
+          fetch("/api/suites"),
+          fetch("/api/batches"),
         ]);
-        if (!runsResponse.ok || !tasksResponse.ok || !jobsResponse.ok) {
+        if (!runsResponse.ok || !tasksResponse.ok || !jobsResponse.ok || !suitesResponse.ok || !batchesResponse.ok) {
           throw new Error("TrustBench API unavailable");
         }
-        const [{ runs }, { tasks: taskList }, { jobs: jobList }] = await Promise.all([
+        const [{ runs }, { tasks: taskList }, { jobs: jobList }, { suites: suiteList }, batchData] = await Promise.all([
           runsResponse.json() as Promise<{ runs: RunRecord[] }>,
           tasksResponse.json() as Promise<{ tasks: TaskDescriptor[] }>,
           jobsResponse.json() as Promise<{ jobs: JobRecord[] }>,
+          suitesResponse.json() as Promise<{ suites: SuiteDescriptor[] }>,
+          batchesResponse.json() as Promise<{ batches: BatchRecord[]; jobs: BatchJob[] }>,
         ]);
         if (cancelled) return;
         setRunRecords(runs);
         setTasks(taskList);
         setJobs(jobList);
+        setSuites(suiteList);
+        setBatches(batchData.batches);
+        setBatchJobs(batchData.jobs);
         setSelectedRunId((current) => current ?? runs[0]?.id);
         setCompareRunId((current) => current ?? runs[1]?.id);
       } catch {
@@ -163,6 +177,9 @@ function Dashboard() {
           setRunRecords([]);
           setTasks([]);
           setJobs([]);
+          setSuites([]);
+          setBatches([]);
+          setBatchJobs([]);
         }
       }
     }
@@ -198,6 +215,27 @@ function Dashboard() {
     }
   }
 
+  async function startBatch(suiteId: string) {
+    setStartingSuite(suiteId);
+    setRunError(undefined);
+    try {
+      const response = await fetch("/api/batches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ suiteId }),
+      });
+      const result = (await response.json()) as { job?: BatchJob; error?: string };
+      if ((!response.ok && response.status !== 409) || !result.job) {
+        throw new Error(result.error ?? "Unable to start batch Runner");
+      }
+      setBatchJobs((current) => [result.job!, ...current.filter((job) => job.id !== result.job!.id)]);
+    } catch (error) {
+      setRunError(error instanceof Error ? error.message : "Unable to start batch Runner");
+    } finally {
+      setStartingSuite(undefined);
+    }
+  }
+
   useEffect(() => {
     setReplayStep(0);
   }, [selectedRunId]);
@@ -216,7 +254,7 @@ function Dashboard() {
     () => runRecords.filter((record) => runFilter === "all" || record.report.passed === (runFilter === "passed")),
     [runFilter, runRecords]
   );
-  const activeJobCount = jobs.filter((job) => job.status === "running").length;
+  const activeJobCount = jobs.filter((job) => job.status === "running").length + batchJobs.filter((job) => job.status === "running").length;
   const pageTitle = view === "tasks" ? "任务中心" : view === "replay" ? "轨迹回放" : view === "compare" ? "运行对比" : "运行详情";
   const pageMeta = view === "tasks"
     ? `本地任务目录 · ${tasks.length} 个任务`
@@ -322,12 +360,58 @@ function Dashboard() {
           <section className="console-pane" aria-label="任务集">
             <div className="section-heading-row">
               <div>
-                <h2>任务集</h2>
-                <p className="section-caption">选择一个受限计划，Runner 会自动启动环境并写入运行记录。</p>
+                <h2>批量评测</h2>
+                <p className="section-caption">运行完整回归套件并保存批次汇总，适合发布前验证。</p>
+              </div>
+              <span className="section-caption">{suites.length} 个套件</span>
+            </div>
+            {runError && <p className="run-error" role="alert">{runError}</p>}
+            {suites.length === 0 ? (
+              <div className="task-empty">暂无批量套件。</div>
+            ) : (
+              <div className="suite-grid">
+                {suites.map((suite) => {
+                  const running = batchJobs.some((job) => job.suiteId === suite.id && job.status === "running");
+                  return (
+                    <article className="suite-card" key={suite.id}>
+                      <div className="suite-card-copy">
+                        <span>{suite.caseCount} 个用例</span>
+                        <h3>{suite.id}</h3>
+                        <p>{suite.description}</p>
+                      </div>
+                      <button type="button" disabled={running || startingSuite !== undefined} onClick={() => void startBatch(suite.id)}>
+                        {running || startingSuite === suite.id ? "批量运行中…" : "运行整套评测"}
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+            <div className="batch-history-panel">
+              <div className="section-heading-row"><h2>最近批次</h2><span className="section-caption">{batches.length} 条历史</span></div>
+              {batches.length === 0 ? <p className="task-empty">还没有批量评测记录。</p> : (
+                <div className="batch-history-list">
+                  {batches.slice(0, 6).map((batch) => {
+                    const passed = batch.summary.complete && batch.summary.failed === 0;
+                    return (
+                      <div className="batch-history-row" key={batch.id}>
+                        <span className={passed ? "batch-result batch-result-pass" : "batch-result batch-result-fail"}>{passed ? "通过" : "失败"}</span>
+                        <strong>{batch.summary.suiteId}</strong>
+                        <span>{batch.summary.passed} / {batch.summary.total} 用例通过</span>
+                        <time dateTime={batch.createdAt}>{formatRunDate(batch.createdAt)}</time>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="section-heading-row task-catalog-heading">
+              <div>
+                <h2>任务目录</h2>
+                <p className="section-caption">选择单条受限计划，Runner 会自动写入运行记录。</p>
               </div>
               <span className="section-caption">{tasks.length} 个任务</span>
             </div>
-            {runError && <p className="run-error" role="alert">{runError}</p>}
             {tasks.length === 0 ? (
               <div className="task-empty">暂无任务清单，请先在 benchmark/tasks 和 benchmark/plans 中添加 JSON 定义。</div>
             ) : (

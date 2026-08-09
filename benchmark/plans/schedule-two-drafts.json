@@ -1,0 +1,13 @@
+{
+  "taskId": "creator.schedule-two-drafts",
+  "actions": [
+    {
+      "type": "click",
+      "selector": "[data-testid=\"schedule-draft-001\"]"
+    },
+    {
+      "type": "click",
+      "selector": "[data-testid=\"schedule-draft-002\"]"
+    }
+  ]
+}

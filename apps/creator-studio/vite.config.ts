@@ -11,8 +11,11 @@ import { fileURLToPath } from 'node:url'
 const benchmarkRuns = fileURLToPath(new URL('../../benchmark/runs/', import.meta.url))
 const benchmarkTasks = fileURLToPath(new URL('../../benchmark/tasks/', import.meta.url))
 const benchmarkPlans = fileURLToPath(new URL('../../benchmark/plans/', import.meta.url))
+const benchmarkSuites = fileURLToPath(new URL('../../benchmark/suites/', import.meta.url))
+const benchmarkBatches = fileURLToPath(new URL('../../benchmark/batches/', import.meta.url))
 const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url))
 const runnerCli = resolve(repositoryRoot, 'benchmark/runner/cli.mjs')
+const batchCli = resolve(repositoryRoot, 'benchmark/runner/batch.cli.mjs')
 
 type TaskDescriptor = {
   id: string
@@ -37,7 +40,38 @@ type Job = {
   artifacts?: { run: string; report: string }
 }
 
+type SuiteDescriptor = {
+  id: string
+  description: string
+  caseCount: number
+  filePath: string
+}
+
+type BatchSummary = {
+  suiteId: string
+  startedAt: string
+  completedAt: string
+  total: number
+  completed: number
+  passed: number
+  failed: number
+  complete: boolean
+  artifacts: { directory: string }
+}
+
+type BatchJob = {
+  id: string
+  suiteId: string
+  status: 'running' | 'passed' | 'failed' | 'error'
+  startedAt: string
+  completedAt?: string
+  exitCode?: number | null
+  message?: string
+  summary?: BatchSummary
+}
+
 const jobs = new Map<string, Job>()
+const batchJobs = new Map<string, BatchJob>()
 
 async function runDirectories(root: string, depth = 0): Promise<string[]> {
   const entries = await readdir(root, { withFileTypes: true })
@@ -78,6 +112,38 @@ async function allRuns() {
         createdAt: metadata.mtime.toISOString(),
         run: JSON.parse(run),
         report: JSON.parse(report),
+      }
+    }),
+  )
+  return records.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+async function batchDirectories(root: string, depth = 0): Promise<string[]> {
+  const entries = await readdir(root, { withFileTypes: true })
+  const hasSummary = entries.some((entry) => entry.isFile() && entry.name === 'batch.json')
+  if (depth >= 2) return hasSummary ? [root] : []
+  const nested = await Promise.all(
+    entries.filter((entry) => entry.isDirectory()).map((entry) => batchDirectories(resolve(root, entry.name), depth + 1)),
+  )
+  return [...(hasSummary ? [root] : []), ...nested.flat()]
+}
+
+async function allBatches() {
+  let directories: string[]
+  try {
+    directories = await batchDirectories(benchmarkBatches)
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return []
+    throw error
+  }
+  const records = await Promise.all(
+    directories.map(async (directory) => {
+      const path = resolve(directory, 'batch.json')
+      const [contents, metadata] = await Promise.all([readFile(path, 'utf8'), stat(path)])
+      return {
+        id: directory.slice(benchmarkBatches.length).replace(/^[/\\]/, '').replaceAll('\\', '/'),
+        createdAt: metadata.mtime.toISOString(),
+        summary: JSON.parse(contents) as BatchSummary,
       }
     }),
   )
@@ -142,8 +208,32 @@ async function taskCatalog(): Promise<TaskDescriptor[]> {
   return tasks.sort((a, b) => a.id.localeCompare(b.id))
 }
 
+async function suiteCatalog(): Promise<SuiteDescriptor[]> {
+  const entries = await readDirectoryFiles(benchmarkSuites)
+  const suites = await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map(async (entry) => {
+        const filePath = resolve(benchmarkSuites, entry.name)
+        const suite = JSON.parse(await readFile(filePath, 'utf8'))
+        return {
+          id: suite.id,
+          description: typeof suite.description === 'string' ? suite.description : '',
+          caseCount: Array.isArray(suite.cases) ? suite.cases.length : 0,
+          filePath,
+        }
+      }),
+  )
+  return suites.sort((a, b) => a.id.localeCompare(b.id))
+}
+
 function publicTask(task: TaskDescriptor) {
   const { filePath: _filePath, ...descriptor } = task
+  return descriptor
+}
+
+function publicSuite(suite: SuiteDescriptor) {
+  const { filePath: _filePath, ...descriptor } = suite
   return descriptor
 }
 
@@ -230,6 +320,55 @@ async function startRun(request: IncomingMessage, response: ServerResponse) {
   jsonResponse(response, { job }, 202)
 }
 
+async function startBatch(request: IncomingMessage, response: ServerResponse) {
+  const payload = await requestBody(request)
+  if (!payload || typeof payload !== 'object' || typeof payload.suiteId !== 'string') {
+    jsonResponse(response, { error: 'suiteId is required.' }, 400)
+    return
+  }
+  const suite = (await suiteCatalog()).find((entry) => entry.id === payload.suiteId)
+  if (!suite) {
+    jsonResponse(response, { error: 'Unknown suite.' }, 404)
+    return
+  }
+  const running = [...batchJobs.values()].find((job) => job.suiteId === suite.id && job.status === 'running')
+  if (running) {
+    jsonResponse(response, { error: 'This suite is already running.', job: running }, 409)
+    return
+  }
+
+  const job: BatchJob = {
+    id: randomUUID(),
+    suiteId: suite.id,
+    status: 'running',
+    startedAt: new Date().toISOString(),
+  }
+  batchJobs.set(job.id, job)
+  const child = spawn(process.execPath, [batchCli, '--suite', suite.filePath, '--continue-on-error'], {
+    cwd: repositoryRoot,
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  let output = ''
+  let diagnostics = ''
+  child.stdout.on('data', (chunk) => { output += String(chunk) })
+  child.stderr.on('data', (chunk) => { diagnostics += String(chunk) })
+  child.once('error', (error) => {
+    job.status = 'error'
+    job.message = error.message
+    job.completedAt = new Date().toISOString()
+  })
+  child.once('close', (exitCode) => {
+    const summary = parseRunnerOutput(output) as BatchSummary | undefined
+    job.exitCode = exitCode
+    job.completedAt = new Date().toISOString()
+    job.summary = summary
+    job.message = summary ? undefined : diagnostics.trim().slice(-1000) || 'Batch Runner did not return a summary.'
+    job.status = exitCode === 0 ? 'passed' : exitCode === 1 && summary ? 'failed' : 'error'
+  })
+  jsonResponse(response, { job }, 202)
+}
+
 function runsApi(): Plugin {
   const installMiddleware = (server: ViteDevServer | PreviewServer) => {
     server.middlewares.use('/api/tasks', async (_request, response) => {
@@ -242,6 +381,25 @@ function runsApi(): Plugin {
     server.middlewares.use('/api/jobs', (_request, response) => {
       const recentJobs = [...jobs.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 50)
       jsonResponse(response, { jobs: recentJobs })
+    })
+    server.middlewares.use('/api/suites', async (_request, response) => {
+      try {
+        jsonResponse(response, { suites: (await suiteCatalog()).map(publicSuite) })
+      } catch (error) {
+        jsonResponse(response, { error: error instanceof Error ? error.message : 'Unknown error' }, 500)
+      }
+    })
+    server.middlewares.use('/api/batches', async (request, response) => {
+      try {
+        if (request.method === 'POST') {
+          await startBatch(request, response)
+          return
+        }
+        const recentJobs = [...batchJobs.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 20)
+        jsonResponse(response, { batches: await allBatches(), jobs: recentJobs })
+      } catch (error) {
+        jsonResponse(response, { error: error instanceof Error ? error.message : 'Unknown error' }, 500)
+      }
     })
     server.middlewares.use('/api/runs/latest', async (_request, response) => {
       try {
