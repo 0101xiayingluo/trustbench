@@ -296,9 +296,6 @@ function Dashboard() {
             <span>≡</span>任务集
           </button>
           <a className="nav-item" href="/sandbox/"><span>▣</span>仿真环境</a>
-          <button className={view === "compare" ? "nav-item nav-item-active" : "nav-item"} type="button" onClick={() => setView("compare")}>
-            <span>⌁</span>运行对比
-          </button>
         </nav>
         <div className="sidebar-meta">
           本地评测节点
