@@ -23,6 +23,8 @@ cd apps/creator-studio
 npm.cmd run dev
 ```
 
+Open `http://localhost:5173/` for the TrustBench run console. The creator sandbox used by benchmark tasks lives at `http://localhost:5173/sandbox/`. The console loads the latest `run.json` and `report.json` from `benchmark/runs` when they are available.
+
 Evaluate a recorded run:
 
 ```powershell
@@ -39,4 +41,4 @@ See [benchmark/README.md](benchmark/README.md) for the evaluator contract and re
 
 ## Status
 
-Phase 1: Simulated creator environment and automatic task evaluator.
+Phase 1 MVP: Simulated creator environment, automatic task runner/evaluator, run overview, trace replay, and run comparison console.

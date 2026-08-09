@@ -1,32 +1,21 @@
-# React + TypeScript + Vite
+# TrustBench Creator Studio
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This Vite application serves two local TrustBench surfaces:
 
-Currently, two official plugins are available:
+- `/` - run overview, trace replay, and safe/risky path comparison
+- `/sandbox/` - the isolated creator workspace used by browser benchmark tasks
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The development and preview servers expose `/api/runs/latest`, which reads the most recently modified run artifacts from `benchmark/runs`. The console falls back to an embedded example when no local run exists.
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```powershell
+npm.cmd run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Verification
+
+```powershell
+npm.cmd run build
+npm.cmd run lint
+```
