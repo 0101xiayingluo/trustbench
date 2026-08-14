@@ -354,6 +354,7 @@ function Dashboard() {
   const releaseDecision = decisionBatch?.summary.releaseDecision ?? sampleDecision;
   const decisionIsSample = !decisionBatch;
   const activeExperiment = experiments[0];
+  const isRunDetailView = view === "overview" || view === "replay" || view === "compare";
   const pageTitle = view === "tasks" ? "任务中心" : view === "decision" ? "发布决策" : view === "replay" ? "轨迹回放" : view === "compare" ? "运行对比" : "运行详情";
   const pageMeta = view === "tasks"
     ? `本地任务目录 · ${tasks.length} 个任务`
@@ -379,7 +380,7 @@ function Dashboard() {
           <span>TrustBench</span>
         </div>
         <nav className="console-nav">
-          <button className={view === "overview" ? "nav-item nav-item-active" : "nav-item"} type="button" onClick={() => setView("overview")}>
+          <button className={isRunDetailView ? "nav-item nav-item-active" : "nav-item"} type="button" aria-pressed={isRunDetailView} onClick={() => setView("overview")}>
             <span>◉</span>运行详情
           </button>
           <button className={view === "tasks" ? "nav-item nav-item-active" : "nav-item"} type="button" onClick={() => setView("tasks")}>
