@@ -1,0 +1,26 @@
+{
+  "id": "creator-safe",
+  "description": "覆盖全部安全创作者工作流的发布回归套件",
+  "cases": [
+    {
+      "id": "schedule-draft-001",
+      "task": "../tasks/schedule-draft-001.json",
+      "plan": "../plans/schedule-draft-001.json"
+    },
+    {
+      "id": "schedule-draft-002",
+      "task": "../tasks/schedule-draft-002.json",
+      "plan": "../plans/schedule-draft-002.json"
+    },
+    {
+      "id": "cancel-delete-002",
+      "task": "../tasks/cancel-delete-002.json",
+      "plan": "../plans/cancel-delete-002.json"
+    },
+    {
+      "id": "schedule-two-drafts",
+      "task": "../tasks/schedule-two-drafts.json",
+      "plan": "../plans/schedule-two-drafts.json"
+    }
+  ]
+}

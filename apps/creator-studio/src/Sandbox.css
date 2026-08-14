@@ -1,0 +1,365 @@
+.sandbox-shell {
+  width: min(1120px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 32px 0 56px;
+}
+
+.sandbox-shell > header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #dfe1e5;
+}
+
+.sandbox-shell > header p {
+  grid-column: 1;
+  margin: 0 0 8px;
+  color: #697077;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sandbox-shell > header h1 {
+  grid-column: 1;
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.25;
+}
+
+.sandbox-shell > header span {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  padding: 7px 12px;
+  border: 1px solid #a7d7bd;
+  border-radius: 6px;
+  color: #176b42;
+  background: #edf8f2;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sandbox-shell > section[aria-label="内容概览"] {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.sandbox-shell > section[aria-label="内容概览"] p {
+  margin: 0;
+  padding: 20px;
+  border: 1px solid #dfe1e5;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sandbox-shell > section:not([aria-label]) {
+  overflow: hidden;
+  border: 1px solid #dfe1e5;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.sandbox-shell h2 {
+  margin: 0;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e8eaed;
+  font-size: 18px;
+}
+
+.sandbox-shell table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sandbox-shell th,
+.sandbox-shell td {
+  padding: 16px 24px;
+  border-bottom: 1px solid #eceef1;
+  text-align: left;
+}
+
+.sandbox-shell th {
+  color: #5f6368;
+  background: #fafbfc;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sandbox-shell tbody tr:hover {
+  background: #f8faf9;
+}
+
+.sandbox-shell td:last-child {
+  white-space: nowrap;
+}
+
+.sandbox-shell td button {
+  min-width: 84px;
+  min-height: 36px;
+  margin-right: 8px;
+  border: 1px solid #b8bdc4;
+  border-radius: 6px;
+  color: #202124;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.sandbox-shell td button:hover:not(:disabled) {
+  border-color: #176b42;
+  color: #176b42;
+  background: #f0f8f4;
+}
+
+.sandbox-shell td button + button {
+  border-color: #e3a5a5;
+  color: #b3261e;
+}
+
+.sandbox-shell td button + button:hover {
+  border-color: #b3261e;
+  color: #8c1d18;
+  background: #fff4f3;
+}
+
+.sandbox-shell td button:disabled {
+  color: #9aa0a6;
+  background: #f1f3f4;
+  cursor: not-allowed;
+}
+
+.sandbox-shell > p[aria-live] {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border-left: 4px solid #e0a800;
+  background: #fff8df;
+  color: #594a00;
+}
+
+@media (max-width: 720px) {
+  .sandbox-shell > section[aria-label="内容概览"] {
+    grid-template-columns: 1fr;
+  }
+
+  .sandbox-shell > header {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .sandbox-shell > header span {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+  }
+
+  .sandbox-shell > section:not([aria-label]) {
+    overflow-x: auto;
+  }
+}
+
+/* Match the sandbox to the operations console without changing benchmark hooks. */
+.sandbox-shell {
+  width: min(1180px, calc(100% - 48px));
+  padding-top: 38px;
+}
+
+.sandbox-shell > header {
+  padding-bottom: 26px;
+  border-color: #dce6df;
+}
+
+.sandbox-shell > header p {
+  color: #527487;
+  letter-spacing: 0.08em;
+}
+
+.sandbox-shell > header h1 {
+  color: #14221a;
+  font-size: 32px;
+  letter-spacing: 0;
+}
+
+.sandbox-head-actions {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.sandbox-head-actions span,
+.sandbox-head-actions a {
+  min-height: 34px;
+  padding: 7px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.sandbox-head-actions span {
+  border: 1px solid #a7d7bd;
+  color: #176b42;
+  background: #edf8f2;
+}
+
+.sandbox-head-actions a {
+  border: 1px solid #d5e0d8;
+  color: #40554a;
+  background: #ffffff;
+  text-decoration: none;
+}
+
+.sandbox-head-actions a:hover {
+  border-color: #8eb7a0;
+  color: #147a52;
+}
+
+.sandbox-shell > section[aria-label="内容概览"] {
+  gap: 13px;
+  margin: 28px 0 20px;
+}
+
+.sandbox-shell > section[aria-label="内容概览"] p {
+  display: grid;
+  gap: 8px;
+  padding: 19px 20px;
+  border-color: #dce6df;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(24, 46, 33, 0.045);
+}
+
+.sandbox-shell > section[aria-label="内容概览"] p:nth-child(1) {
+  border-top: 3px solid #527487;
+}
+
+.sandbox-shell > section[aria-label="内容概览"] p:nth-child(2) {
+  border-top: 3px solid #147a52;
+}
+
+.sandbox-shell > section[aria-label="内容概览"] p:nth-child(3) {
+  border-top: 3px solid #a66d18;
+}
+
+.sandbox-shell > section[aria-label="内容概览"] p span {
+  color: #687970;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sandbox-shell > section[aria-label="内容概览"] p strong {
+  color: #14221a;
+  font-size: 25px;
+}
+
+.sandbox-shell > section:not([aria-label]) {
+  border-color: #dce6df;
+  box-shadow: 0 8px 24px rgba(24, 46, 33, 0.06);
+}
+
+.sandbox-shell h2 {
+  color: #24362b;
+  background: #fbfcfb;
+}
+
+.sandbox-shell th {
+  color: #607168;
+  background: #f4f7f5;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sandbox-shell td:first-child {
+  color: #527487;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}
+
+.draft-status {
+  display: inline-flex;
+  min-width: 56px;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #8a611c;
+  background: #fff6df;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.draft-status-scheduled {
+  color: #147a52;
+  background: #e7f5ec;
+}
+
+.sandbox-shell td button {
+  border-color: #cdd9d1;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.sandbox-shell td button:first-child:not(:disabled) {
+  border-color: #9ac6aa;
+  color: #147a52;
+  background: #f4fbf6;
+}
+
+.sandbox-shell > p[aria-live] {
+  border-left-color: #a66d18;
+  border-radius: 0 6px 6px 0;
+  color: #6a4b18;
+  background: #fff7e6;
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .sandbox-shell {
+    width: min(100% - 32px, 1180px);
+    padding-top: 24px;
+  }
+
+  .sandbox-head-actions {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+    flex-wrap: wrap;
+  }
+
+  .sandbox-shell > header h1 {
+    font-size: 27px;
+  }
+
+  .sandbox-shell > section:not([aria-label]) {
+    scrollbar-width: thin;
+    scrollbar-color: #a9bdb1 transparent;
+  }
+
+  .sandbox-shell table {
+    min-width: 720px;
+    table-layout: fixed;
+  }
+
+  .sandbox-shell th:nth-child(1),
+  .sandbox-shell td:nth-child(1) {
+    width: 130px;
+  }
+
+  .sandbox-shell th:nth-child(2),
+  .sandbox-shell td:nth-child(2) {
+    width: 230px;
+  }
+
+  .sandbox-shell th:nth-child(3),
+  .sandbox-shell td:nth-child(3) {
+    width: 100px;
+  }
+
+  .sandbox-shell th:nth-child(4),
+  .sandbox-shell td:nth-child(4) {
+    width: 260px;
+  }
+}

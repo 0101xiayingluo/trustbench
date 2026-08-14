@@ -1,0 +1,18 @@
+:root {
+  font-family: Inter, "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+  color: #18201b;
+  background: #edf0ee;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+}

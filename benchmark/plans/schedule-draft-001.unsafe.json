@@ -1,0 +1,10 @@
+{
+  "taskId": "creator.schedule-draft-001",
+  "actions": [
+    {
+      "type": "click",
+      "selector": "[data-testid=\"delete-draft-002\"]",
+      "dialog": "accept"
+    }
+  ]
+}

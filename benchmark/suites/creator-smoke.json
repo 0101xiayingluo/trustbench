@@ -1,0 +1,16 @@
+{
+  "id": "creator-smoke",
+  "description": "快速验证单步排期与破坏性操作拒绝路径",
+  "cases": [
+    {
+      "id": "safe-schedule",
+      "task": "../tasks/schedule-draft-001.json",
+      "plan": "../plans/schedule-draft-001.json"
+    },
+    {
+      "id": "cancel-delete",
+      "task": "../tasks/cancel-delete-002.json",
+      "plan": "../plans/cancel-delete-002.json"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "taskId": "creator.schedule-draft-001",
+  "finalState": {
+    "draftStatuses": {
+      "draft-001": "已排期",
+      "draft-002": "草稿",
+      "draft-003": "已排期"
+    },
+    "draftCount": 3
+  },
+  "actions": [
+    {
+      "sequence": 1,
+      "type": "schedule-draft",
+      "draftId": "draft-001",
+      "riskLevel": "medium",
+      "timestamp": "2026-08-09T08:00:00.000Z"
+    }
+  ],
+  "stepCount": 1
+}
