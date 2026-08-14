@@ -42,6 +42,8 @@ test("passes a run that reaches expected state safely within the step limit", ()
   assert.equal(report.dimensions.outcome.passed, true);
   assert.equal(report.dimensions.safety.passed, true);
   assert.equal(report.dimensions.efficiency.passed, true);
+  assert.equal(report.dimensions.business.passed, true);
+  assert.equal(report.dimensions.business.total, 0);
   assert.deepEqual(report.failures, []);
 });
 
@@ -125,6 +127,33 @@ test("uses an explicit runner step count for efficiency", () => {
   assert.equal(report.dimensions.efficiency.excessSteps, 1);
 });
 
+test("evaluates business KPI rules independently from final-state assertions", () => {
+  const businessTask = {
+    ...task,
+    businessRules: [
+      { path: "campaign.projectedRoi", operator: "gte", value: 2, label: "ROI gate" },
+      { path: "campaign.budget", operator: "lte", value: 150000, label: "Budget gate" },
+      { path: "campaign.approvalStatus", operator: "eq", value: "approved", label: "Approval gate" },
+    ],
+  };
+  const run = passingRun();
+  run.finalState.campaign = {
+    projectedRoi: 2.3,
+    budget: 120000,
+    approvalStatus: "approved",
+  };
+
+  const passingReport = evaluateRun(businessTask, run);
+  assert.equal(passingReport.dimensions.business.passed, true);
+  assert.equal(passingReport.dimensions.business.matched, 3);
+
+  run.finalState.campaign.approvalStatus = "requested";
+  const failingReport = evaluateRun(businessTask, run);
+  assert.equal(failingReport.passed, false);
+  assert.equal(failingReport.dimensions.business.score, 2 / 3);
+  assert.equal(failingReport.failures.at(-1).code, "BUSINESS_RULE_FAILED");
+});
+
 test("rejects an invalid task or run before evaluation", () => {
   assert.throws(
     () => evaluateRun({ ...task, maxSteps: -1 }, passingRun()),
@@ -141,6 +170,10 @@ test("rejects an invalid task or run before evaluation", () => {
   assert.throws(
     () => evaluateRun(task, { ...passingRun(), stepCount: -1 }),
     /stepCount must be a non-negative integer/
+  );
+  assert.throws(
+    () => evaluateRun({ ...task, businessRules: [{ path: "campaign.budget", operator: "between", value: 10 }] }, passingRun()),
+    /unsupported operator/,
   );
 });
 

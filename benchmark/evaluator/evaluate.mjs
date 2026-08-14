@@ -17,6 +17,8 @@ function requireCondition(condition, message) {
   }
 }
 
+const supportedBusinessOperators = new Set(["eq", "neq", "gte", "lte", "gt", "lt", "includes"]);
+
 export function validateTask(task) {
   requireCondition(isRecord(task), "Task must be a JSON object.");
   requireCondition(
@@ -38,6 +40,30 @@ export function validateTask(task) {
     Number.isInteger(task.maxSteps) && task.maxSteps >= 0,
     "Task maxSteps must be a non-negative integer."
   );
+  if (task.businessRules !== undefined) {
+    requireCondition(Array.isArray(task.businessRules), "Task businessRules must be an array when provided.");
+    task.businessRules.forEach((rule, index) => {
+      requireCondition(isRecord(rule), `Business rule at index ${index} must be an object.`);
+      requireCondition(
+        typeof rule.path === "string" && rule.path.length > 0,
+        `Business rule at index ${index} path must be a non-empty string.`,
+      );
+      requireCondition(
+        supportedBusinessOperators.has(rule.operator),
+        `Business rule at index ${index} has an unsupported operator.`,
+      );
+      requireCondition(
+        Object.prototype.hasOwnProperty.call(rule, "value"),
+        `Business rule at index ${index} must provide a value.`,
+      );
+      if (["gte", "lte", "gt", "lt"].includes(rule.operator)) {
+        requireCondition(
+          typeof rule.value === "number" && Number.isFinite(rule.value),
+          `Business rule at index ${index} value must be a finite number for ${rule.operator}.`,
+        );
+      }
+    });
+  }
 }
 
 function normalizeRun(task, run) {
@@ -188,6 +214,45 @@ function evaluateEfficiency(maxSteps, steps) {
   };
 }
 
+function compareBusinessValue(actual, operator, expected) {
+  switch (operator) {
+    case "eq": return isDeepStrictEqual(actual, expected);
+    case "neq": return !isDeepStrictEqual(actual, expected);
+    case "gte": return typeof actual === "number" && actual >= expected;
+    case "lte": return typeof actual === "number" && actual <= expected;
+    case "gt": return typeof actual === "number" && actual > expected;
+    case "lt": return typeof actual === "number" && actual < expected;
+    case "includes": return Array.isArray(actual)
+      ? actual.some((entry) => isDeepStrictEqual(entry, expected))
+      : typeof actual === "string" && typeof expected === "string" && actual.includes(expected);
+    default: return false;
+  }
+}
+
+function evaluateBusiness(rules = [], finalState) {
+  const checks = rules.map((rule, index) => {
+    const actual = readPath(finalState, rule.path.split("."));
+    return {
+      id: `business:${rule.path}:${index}`,
+      label: typeof rule.label === "string" ? rule.label : rule.path,
+      path: rule.path,
+      operator: rule.operator,
+      expected: rule.value,
+      actual: actual.exists ? actual.value : null,
+      passed: actual.exists && compareBusinessValue(actual.value, rule.operator, rule.value),
+      ...(actual.exists ? {} : { missing: true }),
+    };
+  });
+  const matched = checks.filter((check) => check.passed).length;
+  return {
+    passed: matched === checks.length,
+    score: checks.length === 0 ? 1 : matched / checks.length,
+    matched,
+    total: checks.length,
+    checks,
+  };
+}
+
 function buildFailures(dimensions) {
   const failures = [];
 
@@ -218,6 +283,18 @@ function buildFailures(dimensions) {
       maxSteps: dimensions.efficiency.maxSteps,
     });
   }
+  for (const check of dimensions.business.checks) {
+    if (!check.passed) {
+      failures.push({
+        code: "BUSINESS_RULE_FAILED",
+        message: `Business rule ${check.label} failed at ${check.path}.`,
+        path: check.path,
+        operator: check.operator,
+        expected: check.expected,
+        actual: check.actual,
+      });
+    }
+  }
 
   return failures;
 }
@@ -229,13 +306,14 @@ export function evaluateRun(task, run) {
     outcome: evaluateOutcome(task.expectedState, finalState),
     safety: evaluateSafety(task.forbiddenActions, actions),
     efficiency: evaluateEfficiency(task.maxSteps, stepCount),
+    business: evaluateBusiness(task.businessRules, finalState),
   };
   const passed = Object.values(dimensions).every(
     (dimension) => dimension.passed
   );
 
   return {
-    evaluatorVersion: 1,
+    evaluatorVersion: 2,
     task: {
       id: task.id,
       version: task.version ?? null,

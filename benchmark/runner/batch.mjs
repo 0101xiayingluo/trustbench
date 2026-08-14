@@ -35,6 +35,24 @@ export function validateSuite(suite) {
       throw new EvaluationInputError(`Suite case at index ${index} id must be a non-empty string.`);
     }
   });
+  if (suite.releasePolicy !== undefined) {
+    if (!isRecord(suite.releasePolicy)) {
+      throw new EvaluationInputError("Suite releasePolicy must be an object when provided.");
+    }
+    const percentageKeys = ["minPassRate", "minPricedCallRate"];
+    for (const key of percentageKeys) {
+      const value = suite.releasePolicy[key];
+      if (value !== undefined && (typeof value !== "number" || value < 0 || value > 1)) {
+        throw new EvaluationInputError(`Suite releasePolicy ${key} must be between 0 and 1.`);
+      }
+    }
+    for (const key of ["maxSafetyViolations", "maxAverageLatencyMs", "maxCostPerPassedRunUsd"]) {
+      const value = suite.releasePolicy[key];
+      if (value !== undefined && (typeof value !== "number" || value < 0)) {
+        throw new EvaluationInputError(`Suite releasePolicy ${key} must be a non-negative number.`);
+      }
+    }
+  }
   return suite;
 }
 
@@ -80,6 +98,64 @@ export function summarizeAgentMetrics(cases) {
   };
 }
 
+export function evaluateReleaseDecision(summary, policy) {
+  if (!isRecord(policy)) return undefined;
+  const safetyViolations = summary.cases.reduce(
+    (total, entry) => total + (Number(entry.safetyViolations) || 0),
+    0,
+  );
+  const passRate = summary.total > 0 ? summary.passed / summary.total : 0;
+  const pricedCallRate = summary.agentMetrics?.calls > 0
+    ? summary.agentMetrics.pricedCalls / summary.agentMetrics.calls
+    : null;
+  const costPerPassedRunUsd = typeof summary.agentMetrics?.estimatedCostUsd === "number" && summary.passed > 0
+    ? summary.agentMetrics.estimatedCostUsd / summary.passed
+    : null;
+  const checks = [];
+  const addCheck = ({ id, label, actual, target, unit, passed }) => {
+    const status = actual === null || actual === undefined ? "missing" : passed ? "passed" : "failed";
+    checks.push({ id, label, status, actual: actual ?? null, target, unit });
+  };
+
+  if (policy.requireComplete !== false) {
+    addCheck({ id: "complete", label: "回归完整性", actual: summary.complete, target: true, unit: "boolean", passed: summary.complete });
+  }
+  if (policy.minPassRate !== undefined) {
+    addCheck({ id: "pass-rate", label: "安全有效运行率", actual: passRate, target: policy.minPassRate, unit: "ratio", passed: passRate >= policy.minPassRate });
+  }
+  if (policy.maxSafetyViolations !== undefined) {
+    addCheck({ id: "safety", label: "安全违规", actual: safetyViolations, target: policy.maxSafetyViolations, unit: "count", passed: safetyViolations <= policy.maxSafetyViolations });
+  }
+  if (policy.maxAverageLatencyMs !== undefined) {
+    const latency = summary.agentMetrics?.averageLatencyMs ?? null;
+    addCheck({ id: "latency", label: "平均模型延迟", actual: latency, target: policy.maxAverageLatencyMs, unit: "ms", passed: typeof latency === "number" && latency <= policy.maxAverageLatencyMs });
+  }
+  if (policy.maxCostPerPassedRunUsd !== undefined) {
+    addCheck({ id: "cost-per-pass", label: "单次通过成本", actual: costPerPassedRunUsd, target: policy.maxCostPerPassedRunUsd, unit: "usd", passed: typeof costPerPassedRunUsd === "number" && costPerPassedRunUsd <= policy.maxCostPerPassedRunUsd });
+  }
+  if (policy.minPricedCallRate !== undefined) {
+    addCheck({ id: "pricing-coverage", label: "模型定价覆盖", actual: pricedCallRate, target: policy.minPricedCallRate, unit: "ratio", passed: typeof pricedCallRate === "number" && pricedCallRate >= policy.minPricedCallRate });
+  }
+
+  const missing = checks.filter((check) => check.status === "missing");
+  const failed = checks.filter((check) => check.status === "failed");
+  const status = failed.length > 0 ? "no-go" : missing.length > 0 ? "insufficient-data" : "go";
+  return {
+    status,
+    decidedAt: summary.completedAt,
+    checks,
+    blockedBy: [...missing, ...failed].map((check) => check.id),
+    metrics: {
+      passRate,
+      safetyViolations,
+      averageLatencyMs: summary.agentMetrics?.averageLatencyMs ?? null,
+      totalEstimatedCostUsd: summary.agentMetrics?.estimatedCostUsd ?? null,
+      costPerPassedRunUsd,
+      pricedCallRate,
+    },
+  };
+}
+
 export async function runSuite({
   suite,
   suitePath,
@@ -118,6 +194,8 @@ export async function runSuite({
         passed: result.report.passed,
         score: result.report.score,
         stepCount: result.report.stepCount,
+        safetyViolations: result.report.dimensions.safety.violations.length,
+        businessScore: result.report.dimensions.business.score,
         failures: result.report.failures,
         ...(result.run.agent ? { agent: result.run.agent } : {}),
         artifacts,
@@ -132,6 +210,8 @@ export async function runSuite({
         passed: false,
         score: 0,
         stepCount: null,
+        safetyViolations: null,
+        businessScore: null,
         failures: [
           {
             code: "RUNNER_ERROR",
@@ -146,7 +226,7 @@ export async function runSuite({
   }
 
   const agentMetrics = summarizeAgentMetrics(cases);
-  const summary = {
+  const baseSummary = {
     suiteId: suite.id,
     startedAt: batchStartedAt,
     completedAt: new Date().toISOString(),
@@ -158,6 +238,11 @@ export async function runSuite({
     cases,
     ...(agentMetrics ? { agentMetrics } : {}),
     artifacts: { directory: batchDirectory },
+  };
+  const releaseDecision = evaluateReleaseDecision(baseSummary, suite.releasePolicy);
+  const summary = {
+    ...baseSummary,
+    ...(releaseDecision ? { releaseDecision } : {}),
   };
   await writeFile(
     resolve(batchDirectory, "batch.json"),

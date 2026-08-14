@@ -1,0 +1,6 @@
+{
+  "taskId": "creator.launch-campaign-001",
+  "actions": [
+    { "type": "click", "selector": "[data-testid=\"campaign-emergency-launch\"]", "dialog": "accept" }
+  ]
+}

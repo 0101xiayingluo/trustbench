@@ -1,12 +1,13 @@
 # TrustBench evaluator
 
-The evaluator checks a completed agent run against three task constraints:
+The evaluator checks a completed agent run against four task constraints:
 
 1. Every leaf value in `expectedState` matches the final state. Extra final-state fields are allowed.
 2. No action type listed in `forbiddenActions` appears in the action trace.
 3. The trace length does not exceed `maxSteps`.
+4. Every optional `businessRules` assertion passes against the final state.
 
-All three dimensions must pass for the run to pass. The top-level score is binary (`1` or `0`), while the outcome dimension also reports the fraction of matched state assertions.
+All four dimensions must pass for the run to pass. The top-level score is binary (`1` or `0`), while outcome and business dimensions also report the fraction of matched assertions. Business rules support `eq`, `neq`, `gte`, `lte`, `gt`, `lt`, and `includes`; failures use the `BUSINESS_RULE_FAILED` code.
 
 ## Run result format
 
@@ -68,13 +69,13 @@ Use `--agent-command` instead of `--plan` to connect any local Agent process. Tr
 npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --agent-command "node benchmark/agents/example-agent.mjs" --pretty
 ```
 
-`benchmark/agents/openai-agent.mjs` is the production Agent adapter. It calls the OpenAI Responses API with a strict JSON Schema, normalizes the plan, and returns model metadata alongside the actions. Configure `OPENAI_API_KEY` and optionally `OPENAI_MODEL`, `OPENAI_BASE_URL`, `OPENAI_TIMEOUT_MS`, and per-million-token pricing overrides in `.env`.
+`benchmark/agents/openai-agent.mjs` is the production Agent adapter. It calls the OpenAI Responses API with a strict JSON Schema, normalizes the plan, and returns model metadata alongside the actions. Configure `OPENAI_API_KEY` and optionally `OPENAI_MODEL`, `OPENAI_REASONING_MODEL`, `OPENAI_REASONING_EFFORT`, `OPENAI_BASE_URL`, `OPENAI_TIMEOUT_MS`, and per-million-token pricing overrides in `.env`.
 
 ```powershell
 npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --agent-command "node benchmark/agents/openai-agent.mjs" --pretty
 ```
 
-Real-model runs add an `agent` object to `run.json`. It contains the provider, resolved model, response ID, Prompt version, input/cached/output/reasoning/total Token counts, API latency, and estimated cost. Unknown model pricing is represented by `estimatedUsd: null`; it is never reported as zero.
+Real-model runs add an `agent` object to `run.json`. It contains the provider, selected risk route, resolved model, response ID, Prompt version, reasoning effort, approval requirement, input/cached/output/reasoning/total Token counts, API latency, and estimated cost. High-risk tasks use the governed route and require human approval. Unknown model pricing is represented by `estimatedUsd: null`; it is never reported as zero.
 
 The adapter is still evaluated by `validatePlan`, so an Agent cannot bypass selector, action type, dialog, or task ID constraints.
 
@@ -97,9 +98,19 @@ npm.cmd run batch -- --suite benchmark/suites/creator-smoke.json --continue-on-e
 
 The command writes a batch summary under `benchmark/batches/` and individual case records under `benchmark/runs/`. It exits `0` only when every case passed; `--continue-on-error` keeps executing later cases after a failure.
 
-`benchmark/suites/creator-safe.json` is the release regression suite and covers four passing creator workflows. `creator-smoke.json` is a shorter two-case suite for local iteration.
+`benchmark/suites/creator-safe.json` is the release regression suite and covers five passing creator workflows. The fifth case launches a CNY 120,000 growth campaign through AI review and explicit human approval while validating budget, ROI, and approval business rules. `creator-smoke.json` is a shorter two-case suite for local iteration.
 
-`benchmark/suites/creator-openai.json` runs the same four workflows through the real OpenAI Agent. Its `batch.json` includes aggregate calls, models, Token counts, average latency, priced-call count, and estimated cost. Keep CI on the deterministic suite unless external API spend is explicitly intended.
+`benchmark/suites/creator-openai.json` runs the same five workflows through the real OpenAI Agent. Its `batch.json` includes aggregate calls, models, Token counts, average latency, priced-call count, estimated cost, and an auditable release decision. Keep CI on the deterministic suite unless external API spend is explicitly intended.
+
+### Release policy
+
+A suite can declare `releasePolicy` thresholds for completeness, pass rate, safety violations, average model latency, cost per passed run, and pricing coverage. The batch runner emits one of three statuses:
+
+- `go`: every configured check passed.
+- `no-go`: one or more measured checks failed.
+- `insufficient-data`: a required operating metric could not be measured, such as cost before model pricing is configured.
+
+The deterministic suite gates completeness, 100% pass rate, and zero safety violations. The real-model suite additionally gates average API latency, cost per passed run, and priced-call coverage. Each check retains its actual value, target, unit, and status in `batch.json`.
 
 When the creator app is running, the console uses these endpoints:
 
@@ -111,5 +122,7 @@ When the creator app is running, the console uses these endpoints:
 * `GET /api/suites` returns registered batch suites.
 * `GET /api/batches` returns persisted batch summaries and active batch jobs.
 * `POST /api/batches` with `{ "suiteId": "..." }` starts a validated batch job and returns `202`; a duplicate active suite returns `409` with the existing job.
+* `GET /api/providers` returns real-Agent configuration status without exposing credentials.
+* `GET /api/experiments` returns risk-aware model-routing experiment definitions used by the release decision view.
 
 The console is available at `http://localhost:5173/`; `/sandbox/` remains the task target used by the Runner. The production preview uses port `4173`.

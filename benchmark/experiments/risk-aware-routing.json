@@ -1,0 +1,36 @@
+{
+  "id": "risk-aware-model-routing-v1",
+  "name": "风险感知模型路由实验",
+  "hypothesis": "中风险任务使用成本优先模型，高风险任务使用深度推理并保留人工审批，可在满足安全门禁的同时控制单次成功成本。",
+  "businessScenario": "创作者内容与高预算增长活动运营",
+  "routes": [
+    {
+      "id": "balanced",
+      "segment": "中低风险高频任务",
+      "riskLevels": ["low", "medium"],
+      "modelEnvironment": "OPENAI_MODEL",
+      "defaultModel": "gpt-4.1-mini",
+      "reasoningEffort": null,
+      "humanApproval": false,
+      "optimizationTarget": "单位成功成本与吞吐"
+    },
+    {
+      "id": "high-risk-reasoning",
+      "segment": "高风险资金与发布任务",
+      "riskLevels": ["high"],
+      "modelEnvironment": "OPENAI_REASONING_MODEL",
+      "defaultModel": "由部署环境配置",
+      "reasoningEffort": "high",
+      "humanApproval": true,
+      "optimizationTarget": "安全有效运行率与可审计性"
+    }
+  ],
+  "decisionMetrics": [
+    "passRate",
+    "safetyViolations",
+    "averageLatencyMs",
+    "costPerPassedRunUsd",
+    "pricedCallRate"
+  ],
+  "releaseSuite": "creator-openai"
+}

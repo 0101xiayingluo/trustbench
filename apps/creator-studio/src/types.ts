@@ -3,7 +3,14 @@ export type RiskLevel = "medium" | "high";
 export type ActionType =
   | "schedule-draft"
   | "delete-draft"
-  | "cancel-delete-draft";
+  | "cancel-delete-draft"
+  | "run-campaign-review"
+  | "request-campaign-approval"
+  | "approve-campaign"
+  | "cancel-campaign-approval"
+  | "launch-campaign"
+  | "bypass-campaign-approval"
+  | "cancel-emergency-launch";
 
 export type Draft = {
   id: string;
@@ -17,6 +24,18 @@ export type ActionRecord = {
   draftId: string;
   riskLevel: RiskLevel;
   timestamp: string;
+  entityType?: "draft" | "campaign";
+};
+
+export type CampaignState = {
+  id: string;
+  budget: number;
+  projectedRevenue: number;
+  projectedRoi: number;
+  riskScore: number;
+  reviewStatus: "pending" | "passed";
+  approvalStatus: "pending" | "requested" | "approved";
+  launchStatus: "draft" | "launched";
 };
 
 export type PlanAction = {
@@ -32,6 +51,7 @@ export type TrustBenchState = {
   draftStatuses: Record<string, DraftStatus>;
   draftCount: number;
   actions: ActionRecord[];
+  campaign?: CampaignState;
 };
 
 export type EvaluationReport = {
@@ -72,6 +92,21 @@ export type EvaluationReport = {
       maxSteps: number;
       excessSteps: number;
     };
+    business?: {
+      passed: boolean;
+      score: number;
+      matched: number;
+      total: number;
+      checks: Array<{
+        id: string;
+        label: string;
+        path: string;
+        operator: string;
+        expected: unknown;
+        actual: unknown;
+        passed: boolean;
+      }>;
+    };
   };
   failures: Array<{
     code: string;
@@ -96,6 +131,9 @@ export type AgentRunMetadata = {
   model: string;
   responseId: string | null;
   promptVersion: string;
+  route?: string;
+  reasoningEffort?: string | null;
+  humanApprovalRequired?: boolean;
   latencyMs: number;
   usage: {
     inputTokens: number;
@@ -122,6 +160,29 @@ export type AgentProvider = {
   label: string;
   configured: boolean;
   model: string;
+  reasoningModel: string | null;
+  reasoningEffort: string | null;
+};
+
+export type ExperimentRoute = {
+  id: string;
+  segment: string;
+  riskLevels: string[];
+  modelEnvironment: string;
+  defaultModel: string;
+  reasoningEffort: string | null;
+  humanApproval: boolean;
+  optimizationTarget: string;
+};
+
+export type ExperimentDescriptor = {
+  id: string;
+  name: string;
+  hypothesis: string;
+  businessScenario: string;
+  routes: ExperimentRoute[];
+  decisionMetrics: string[];
+  releaseSuite: string;
 };
 
 export type RunSnapshot = {
@@ -190,7 +251,30 @@ export type BatchSummary = {
     estimatedCostUsd: number | null;
     pricedCalls: number;
   };
+  releaseDecision?: ReleaseDecision;
   artifacts: { directory: string };
+};
+
+export type ReleaseDecision = {
+  status: "go" | "no-go" | "insufficient-data";
+  decidedAt: string;
+  checks: Array<{
+    id: string;
+    label: string;
+    status: "passed" | "failed" | "missing";
+    actual: boolean | number | null;
+    target: boolean | number;
+    unit: "boolean" | "ratio" | "count" | "ms" | "usd";
+  }>;
+  blockedBy: string[];
+  metrics: {
+    passRate: number;
+    safetyViolations: number;
+    averageLatencyMs: number | null;
+    totalEstimatedCostUsd: number | null;
+    costPerPassedRunUsd: number | null;
+    pricedCallRate: number | null;
+  };
 };
 
 export type BatchRecord = {

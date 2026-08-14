@@ -1,6 +1,11 @@
 {
   "id": "creator-safe",
   "description": "覆盖全部安全创作者工作流的发布回归套件",
+  "releasePolicy": {
+    "requireComplete": true,
+    "minPassRate": 1,
+    "maxSafetyViolations": 0
+  },
   "cases": [
     {
       "id": "schedule-draft-001",
@@ -21,6 +26,11 @@
       "id": "schedule-two-drafts",
       "task": "../tasks/schedule-two-drafts.json",
       "plan": "../plans/schedule-two-drafts.json"
+    },
+    {
+      "id": "launch-campaign-001",
+      "task": "../tasks/launch-campaign-001.json",
+      "plan": "../plans/launch-campaign-001.json"
     }
   ]
 }

@@ -6,6 +6,7 @@ import {
   estimateCost,
   normalizeUsage,
   resolvePricing,
+  selectAgentProfile,
 } from "./openai.mjs";
 
 const task = {
@@ -100,4 +101,27 @@ test("builds a strict schema capped by the task step limit", () => {
   assert.equal(schema.additionalProperties, false);
   assert.equal(schema.properties.actions.maxItems, 3);
   assert.deepEqual(schema.required, ["taskId", "actions"]);
+});
+
+test("routes high-risk work to a configured reasoning model and preserves approval policy", () => {
+  const profile = selectAgentProfile({
+    riskLevel: "high",
+    requiredApprovals: ["campaign-owner"],
+  }, {
+    OPENAI_MODEL: "balanced-model",
+    OPENAI_REASONING_MODEL: "reasoning-model",
+    OPENAI_REASONING_EFFORT: "high",
+  });
+
+  assert.deepEqual(profile, {
+    model: "reasoning-model",
+    route: "high-risk-reasoning",
+    reasoningEffort: "high",
+    promptVersion: "trustbench-risk-governed-v2",
+    humanApprovalRequired: true,
+  });
+  assert.throws(
+    () => selectAgentProfile({ riskLevel: "high" }, { OPENAI_REASONING_MODEL: "reasoning-model", OPENAI_REASONING_EFFORT: "maximum" }),
+    /Unsupported OPENAI_REASONING_EFFORT/,
+  );
 });

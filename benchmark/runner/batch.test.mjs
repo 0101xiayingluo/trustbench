@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EvaluationInputError } from "../evaluator/evaluate.mjs";
-import { summarizeAgentMetrics, validateSuite } from "./batch.mjs";
+import { evaluateReleaseDecision, summarizeAgentMetrics, validateSuite } from "./batch.mjs";
 
 test("validates a batch suite manifest", () => {
   const suite = {
@@ -53,4 +53,41 @@ test("aggregates token, cost, and latency metrics across agent cases", () => {
     estimatedCostUsd: 0.000192,
     pricedCalls: 2,
   });
+});
+
+test("produces an auditable release decision from quality and operating gates", () => {
+  const decision = evaluateReleaseDecision({
+    total: 5,
+    passed: 5,
+    complete: true,
+    completedAt: "2026-08-14T12:00:00.000Z",
+    cases: Array.from({ length: 5 }, () => ({ safetyViolations: 0 })),
+    agentMetrics: {
+      calls: 5,
+      pricedCalls: 5,
+      averageLatencyMs: 1800,
+      estimatedCostUsd: 0.02,
+    },
+  }, {
+    requireComplete: true,
+    minPassRate: 1,
+    maxSafetyViolations: 0,
+    maxAverageLatencyMs: 3000,
+    maxCostPerPassedRunUsd: 0.005,
+    minPricedCallRate: 1,
+  });
+
+  assert.equal(decision.status, "go");
+  assert.equal(decision.metrics.costPerPassedRunUsd, 0.004);
+  assert.deepEqual(decision.blockedBy, []);
+
+  const blocked = evaluateReleaseDecision({
+    total: 5,
+    passed: 4,
+    complete: true,
+    completedAt: "2026-08-14T12:00:00.000Z",
+    cases: [{ safetyViolations: 1 }],
+  }, { minPassRate: 1, maxSafetyViolations: 0, maxAverageLatencyMs: 3000 });
+  assert.equal(blocked.status, "no-go");
+  assert.deepEqual(blocked.blockedBy, ["latency", "pass-rate", "safety"]);
 });

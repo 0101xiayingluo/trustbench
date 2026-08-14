@@ -13,6 +13,7 @@ const benchmarkTasks = fileURLToPath(new URL('../../benchmark/tasks/', import.me
 const benchmarkPlans = fileURLToPath(new URL('../../benchmark/plans/', import.meta.url))
 const benchmarkSuites = fileURLToPath(new URL('../../benchmark/suites/', import.meta.url))
 const benchmarkBatches = fileURLToPath(new URL('../../benchmark/batches/', import.meta.url))
+const benchmarkExperiments = fileURLToPath(new URL('../../benchmark/experiments/', import.meta.url))
 const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url))
 const runnerCli = resolve(repositoryRoot, 'benchmark/runner/cli.mjs')
 const batchCli = resolve(repositoryRoot, 'benchmark/runner/batch.cli.mjs')
@@ -58,6 +59,7 @@ type BatchSummary = {
   passed: number
   failed: number
   complete: boolean
+  releaseDecision?: unknown
   artifacts: { directory: string }
 }
 
@@ -239,6 +241,16 @@ async function suiteCatalog(): Promise<SuiteDescriptor[]> {
       }),
   )
   return suites.sort((a, b) => a.id.localeCompare(b.id))
+}
+
+async function experimentCatalog() {
+  const entries = await readDirectoryFiles(benchmarkExperiments)
+  const experiments = await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+      .map(async (entry) => JSON.parse(await readFile(resolve(benchmarkExperiments, entry.name), 'utf8'))),
+  )
+  return experiments.sort((a, b) => String(a.id).localeCompare(String(b.id)))
 }
 
 function publicTask(task: TaskDescriptor) {
@@ -436,8 +448,17 @@ function runsApi(providerEnv: Record<string, string>): Plugin {
           label: 'OpenAI',
           configured: Boolean(providerEnv.OPENAI_API_KEY || process.env.OPENAI_API_KEY),
           model: providerEnv.OPENAI_MODEL || process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+          reasoningModel: providerEnv.OPENAI_REASONING_MODEL || process.env.OPENAI_REASONING_MODEL || null,
+          reasoningEffort: providerEnv.OPENAI_REASONING_EFFORT || process.env.OPENAI_REASONING_EFFORT || null,
         }],
       })
+    })
+    server.middlewares.use('/api/experiments', async (_request, response) => {
+      try {
+        jsonResponse(response, { experiments: await experimentCatalog() })
+      } catch (error) {
+        jsonResponse(response, { error: error instanceof Error ? error.message : 'Unknown error' }, 500)
+      }
     })
     server.middlewares.use('/api/jobs', (_request, response) => {
       const recentJobs = [...jobs.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 50)

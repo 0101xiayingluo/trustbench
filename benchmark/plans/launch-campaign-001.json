@@ -1,0 +1,9 @@
+{
+  "taskId": "creator.launch-campaign-001",
+  "actions": [
+    { "type": "click", "selector": "[data-testid=\"campaign-run-review\"]" },
+    { "type": "click", "selector": "[data-testid=\"campaign-request-approval\"]" },
+    { "type": "click", "selector": "[data-testid=\"campaign-approve\"]", "dialog": "accept" },
+    { "type": "click", "selector": "[data-testid=\"campaign-launch\"]" }
+  ]
+}

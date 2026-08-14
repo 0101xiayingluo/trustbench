@@ -5,16 +5,18 @@ import type {
   BatchJob,
   BatchRecord,
   EvaluationReport,
+  ExperimentDescriptor,
   JobRecord,
   PlanAction,
   RecordedRun,
+  ReleaseDecision,
   RunRecord,
   SuiteDescriptor,
   TaskDescriptor,
 } from "./types";
 import "./App.css";
 
-type View = "overview" | "replay" | "compare" | "tasks";
+type View = "overview" | "replay" | "compare" | "tasks" | "decision";
 type RunFilter = "all" | "passed" | "failed";
 
 const safeRun: RecordedRun = {
@@ -41,7 +43,10 @@ const safeRun: RecordedRun = {
     provider: "openai",
     model: "gpt-4.1-mini",
     responseId: "resp_example",
-    promptVersion: "trustbench-plan-v1",
+    promptVersion: "trustbench-balanced-v2",
+    route: "balanced",
+    reasoningEffort: null,
+    humanApprovalRequired: false,
     latencyMs: 842,
     usage: {
       inputTokens: 684,
@@ -61,7 +66,7 @@ const safeRun: RecordedRun = {
 };
 
 const safeReport: EvaluationReport = {
-  evaluatorVersion: 1,
+  evaluatorVersion: 2,
   task: { id: safeRun.taskId, version: 1, riskLevel: "medium" },
   passed: true,
   score: 1,
@@ -91,8 +96,30 @@ const safeReport: EvaluationReport = {
     },
     safety: { passed: true, violations: [] },
     efficiency: { passed: true, steps: 1, maxSteps: 5, excessSteps: 0 },
+    business: { passed: true, score: 1, matched: 0, total: 0, checks: [] },
   },
   failures: [],
+};
+
+const sampleDecision: ReleaseDecision = {
+  status: "go",
+  decidedAt: "2026-08-14T08:00:00.000Z",
+  checks: [
+    { id: "complete", label: "回归完整性", status: "passed", actual: true, target: true, unit: "boolean" },
+    { id: "pass-rate", label: "安全有效运行率", status: "passed", actual: 1, target: 1, unit: "ratio" },
+    { id: "safety", label: "安全违规", status: "passed", actual: 0, target: 0, unit: "count" },
+    { id: "latency", label: "平均模型延迟", status: "passed", actual: 1860, target: 5000, unit: "ms" },
+    { id: "cost-per-pass", label: "单次通过成本", status: "passed", actual: 0.0042, target: 0.01, unit: "usd" },
+  ],
+  blockedBy: [],
+  metrics: {
+    passRate: 1,
+    safetyViolations: 0,
+    averageLatencyMs: 1860,
+    totalEstimatedCostUsd: 0.021,
+    costPerPassedRunUsd: 0.0042,
+    pricedCallRate: 1,
+  },
 };
 
 function formatPlanAction(action: PlanAction) {
@@ -149,6 +176,15 @@ function formatCost(value: number | null | undefined) {
   return `$${value < 0.01 ? value.toFixed(6) : value.toFixed(4)}`;
 }
 
+function formatGateValue(value: boolean | number | null, unit: string) {
+  if (value === null) return "数据缺失";
+  if (unit === "boolean") return value ? "是" : "否";
+  if (unit === "ratio") return `${(Number(value) * 100).toFixed(0)}%`;
+  if (unit === "ms") return formatLatency(Number(value));
+  if (unit === "usd") return formatCost(Number(value));
+  return new Intl.NumberFormat("zh-CN").format(Number(value));
+}
+
 async function fetchJson<T>(url: string): Promise<T | undefined> {
   try {
     const response = await fetch(url);
@@ -171,6 +207,7 @@ function Dashboard() {
   const [batches, setBatches] = useState<BatchRecord[]>([]);
   const [batchJobs, setBatchJobs] = useState<BatchJob[]>([]);
   const [providers, setProviders] = useState<AgentProvider[]>([]);
+  const [experiments, setExperiments] = useState<ExperimentDescriptor[]>([]);
   const [startingTask, setStartingTask] = useState<string>();
   const [startingSuite, setStartingSuite] = useState<string>();
   const [runError, setRunError] = useState<string>();
@@ -210,13 +247,14 @@ function Dashboard() {
   useEffect(() => {
     let cancelled = false;
     async function refresh() {
-      const [runData, taskData, jobData, suiteData, batchData, providerData] = await Promise.all([
+      const [runData, taskData, jobData, suiteData, batchData, providerData, experimentData] = await Promise.all([
         fetchJson<{ runs: RunRecord[] }>("/api/runs"),
         fetchJson<{ tasks: TaskDescriptor[] }>("/api/tasks"),
         fetchJson<{ jobs: JobRecord[] }>("/api/jobs"),
         fetchJson<{ suites: SuiteDescriptor[] }>("/api/suites"),
         fetchJson<{ batches: BatchRecord[]; jobs: BatchJob[] }>("/api/batches"),
         fetchJson<{ providers: AgentProvider[] }>("/api/providers"),
+        fetchJson<{ experiments: ExperimentDescriptor[] }>("/api/experiments"),
       ]);
       if (cancelled) return;
       if (runData) {
@@ -232,6 +270,7 @@ function Dashboard() {
         setBatchJobs(batchData.jobs);
       }
       if (providerData) setProviders(providerData.providers);
+      if (experimentData) setExperiments(experimentData.experiments);
     }
     void refresh();
     const timer = window.setInterval(() => void refresh(), 2000);
@@ -311,14 +350,24 @@ function Dashboard() {
   const activeJobCount = jobs.filter((job) => job.status === "running").length + batchJobs.filter((job) => job.status === "running").length;
   const openAIProvider = providers.find((provider) => provider.id === "openai");
   const openAIConfigured = openAIProvider?.configured ?? false;
-  const pageTitle = view === "tasks" ? "任务中心" : view === "replay" ? "轨迹回放" : view === "compare" ? "运行对比" : "运行详情";
+  const decisionBatch = batches.find((batch) => batch.summary.releaseDecision);
+  const releaseDecision = decisionBatch?.summary.releaseDecision ?? sampleDecision;
+  const decisionIsSample = !decisionBatch;
+  const activeExperiment = experiments[0];
+  const pageTitle = view === "tasks" ? "任务中心" : view === "decision" ? "发布决策" : view === "replay" ? "轨迹回放" : view === "compare" ? "运行对比" : "运行详情";
   const pageMeta = view === "tasks"
     ? `本地任务目录 · ${tasks.length} 个任务`
+    : view === "decision"
+      ? `${decisionBatch?.summary.suiteId ?? "creator-openai"} · ${decisionIsSample ? "决策样例" : formatRunDate(decisionBatch.createdAt)}`
     : `${run.taskId} · ${selectedRecord.id === "example/safe" ? "内置示例" : selectedRecord.id}`;
   const statusLabel = view === "tasks"
     ? activeJobCount > 0 ? `${activeJobCount} 个任务运行中` : "Runner 就绪"
+    : view === "decision"
+      ? releaseDecision.status === "go" ? "允许发布" : releaseDecision.status === "no-go" ? "阻断发布" : "数据不足"
     : report.passed ? "评测通过" : "评测失败";
-  const statusClass = view === "tasks" && activeJobCount > 0
+  const statusClass = view === "decision"
+    ? releaseDecision.status === "go" ? "run-status run-status-pass" : releaseDecision.status === "no-go" ? "run-status run-status-fail" : "run-status run-status-running"
+    : view === "tasks" && activeJobCount > 0
     ? "run-status run-status-running"
     : view === "tasks" || report.passed ? "run-status run-status-pass" : "run-status run-status-fail";
 
@@ -335,6 +384,9 @@ function Dashboard() {
           </button>
           <button className={view === "tasks" ? "nav-item nav-item-active" : "nav-item"} type="button" onClick={() => setView("tasks")}>
             <span>≡</span>任务集
+          </button>
+          <button className={view === "decision" ? "nav-item nav-item-active" : "nav-item"} type="button" onClick={() => setView("decision")}>
+            <span>◇</span>发布决策
           </button>
           <a className="nav-item" href="/sandbox/"><span>▣</span>仿真环境</a>
         </nav>
@@ -356,7 +408,7 @@ function Dashboard() {
           </span>
         </header>
 
-        <nav className={view === "tasks" ? "view-tabs view-tabs-hidden" : "view-tabs"} aria-label="运行视图">
+        <nav className={view === "tasks" || view === "decision" ? "view-tabs view-tabs-hidden" : "view-tabs"} aria-label="运行视图">
           {(["overview", "replay", "compare"] as View[]).map((tab) => (
             <button
               key={tab}
@@ -370,7 +422,7 @@ function Dashboard() {
           ))}
         </nav>
 
-        <section className={view === "tasks" ? "run-records run-records-hidden" : "run-records"} aria-label="运行记录">
+        <section className={view === "tasks" || view === "decision" ? "run-records run-records-hidden" : "run-records"} aria-label="运行记录">
           <div className="run-records-heading">
             <span>运行记录</span>
             <div className="run-record-tools">
@@ -408,6 +460,74 @@ function Dashboard() {
             </div>
           )}
         </section>
+
+        {view === "decision" && (
+          <section className="console-pane decision-pane" aria-label="AI 发布决策中心">
+            <div className="decision-summary">
+              <div>
+                <span className="decision-kicker">RELEASE GATE · {decisionIsSample ? "SAMPLE" : "LIVE"}</span>
+                <h2>{releaseDecision.status === "go" ? "满足业务与治理门槛" : releaseDecision.status === "no-go" ? "存在发布阻断项" : "关键运营数据不足"}</h2>
+                <p>{activeExperiment?.hypothesis ?? "在保障安全有效运行率的前提下，优化模型成本、延迟与人工审批覆盖。"}</p>
+              </div>
+              <strong className={`decision-verdict decision-verdict-${releaseDecision.status}`}>{releaseDecision.status === "go" ? "GO" : releaseDecision.status === "no-go" ? "NO-GO" : "HOLD"}</strong>
+            </div>
+
+            <div className="decision-kpi-grid">
+              <div><span>安全有效运行率</span><strong>{(releaseDecision.metrics.passRate * 100).toFixed(0)}%</strong><small>发布套件通过率</small></div>
+              <div><span>安全违规</span><strong className={releaseDecision.metrics.safetyViolations === 0 ? "metric-pass" : "metric-fail"}>{releaseDecision.metrics.safetyViolations}</strong><small>高风险动作命中</small></div>
+              <div><span>单次通过成本</span><strong>{formatCost(releaseDecision.metrics.costPerPassedRunUsd)}</strong><small>质量达标后的单位成本</small></div>
+              <div><span>平均模型延迟</span><strong>{formatLatency(releaseDecision.metrics.averageLatencyMs)}</strong><small>不含浏览器执行耗时</small></div>
+            </div>
+
+            <div className="decision-content-grid">
+              <section className="decision-section" aria-labelledby="gate-checks-title">
+                <div className="section-heading-row">
+                  <div><h2 id="gate-checks-title">发布门禁检查</h2><p className="section-caption">每项检查均来自批次产物，可追溯实际值和目标阈值。</p></div>
+                  <span className="section-caption">{releaseDecision.checks.filter((check) => check.status === "passed").length} / {releaseDecision.checks.length} 通过</span>
+                </div>
+                <div className="gate-check-list">
+                  {releaseDecision.checks.map((check) => (
+                    <div className="gate-check" key={check.id}>
+                      <StatusMark passed={check.status === "passed"} />
+                      <div><strong>{check.label}</strong><small>{formatGateValue(check.actual, check.unit)} / 目标 {formatGateValue(check.target, check.unit)}</small></div>
+                      <span className={`gate-status gate-status-${check.status}`}>{check.status === "passed" ? "通过" : check.status === "missing" ? "缺数据" : "阻断"}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="decision-section" aria-labelledby="routing-title">
+                <div className="section-heading-row">
+                  <div><h2 id="routing-title">风险感知模型路由</h2><p className="section-caption">实验 {activeExperiment?.id ?? "risk-aware-model-routing-v1"}</p></div>
+                  <span className={openAIConfigured ? "provider-status provider-status-ready" : "provider-status"}><span />{openAIConfigured ? "Provider 已连接" : "Provider 未配置"}</span>
+                </div>
+                <div className="route-list">
+                  {(activeExperiment?.routes ?? []).map((route) => {
+                    const model = route.id === "high-risk-reasoning"
+                      ? openAIProvider?.reasoningModel ?? route.defaultModel
+                      : openAIProvider?.model ?? route.defaultModel;
+                    return (
+                      <article className="route-row" key={route.id}>
+                        <div className="route-label"><span>{route.riskLevels.join(" / ")}</span><strong>{route.segment}</strong></div>
+                        <div><small>模型</small><strong className="code-text">{model}</strong></div>
+                        <div><small>推理</small><strong>{route.reasoningEffort ?? "标准"}</strong></div>
+                        <div><small>人工审批</small><strong>{route.humanApproval ? "必须" : "按策略"}</strong></div>
+                        <p>{route.optimizationTarget}</p>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+
+            <div className="business-scenario-strip">
+              <span>复杂业务样例</span>
+              <strong>¥120,000 秋季增长活动</strong>
+              <span>AI 风险预检</span><span>人工审批</span><span>ROI ≥ 2.0</span><span>禁止绕过上线</span>
+              <a href="/sandbox/">查看业务工作流</a>
+            </div>
+          </section>
+        )}
 
         {view === "tasks" && (
           <section className="console-pane" aria-label="任务集">
@@ -559,6 +679,13 @@ function Dashboard() {
                 <strong className="metric-value">{report.stepCount} / {report.dimensions.efficiency.maxSteps}</strong>
                 <span className="metric-note">{report.dimensions.efficiency.maxSteps - report.stepCount} 步余量</span>
               </div>
+              {report.dimensions.business && report.dimensions.business.total > 0 && (
+                <div className="metric-item metric-item-business">
+                  <span className="metric-label">业务门禁</span>
+                  <strong className={report.dimensions.business.passed ? "metric-value metric-pass" : "metric-value metric-fail"}>{report.dimensions.business.matched} / {report.dimensions.business.total}</strong>
+                  <span className="metric-note">{report.dimensions.business.passed ? "业务 KPI 全部达标" : "存在业务规则未满足"}</span>
+                </div>
+              )}
             </div>
 
             <div className="section-heading-row agent-metrics-heading">
@@ -624,6 +751,14 @@ function Dashboard() {
                     <td>{report.dimensions.safety.violations.length} 次</td>
                     <td><StatusMark passed={report.dimensions.safety.passed} />{report.dimensions.safety.passed ? "通过" : "失败"}</td>
                   </tr>
+                  {report.dimensions.business?.checks.map((check) => (
+                    <tr key={check.id}>
+                      <td className="code-text">{check.path} {check.operator}</td>
+                      <td>{String(check.expected)}</td>
+                      <td>{String(check.actual)}</td>
+                      <td><StatusMark passed={check.passed} />{check.passed ? "业务达标" : "业务未达标"}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
