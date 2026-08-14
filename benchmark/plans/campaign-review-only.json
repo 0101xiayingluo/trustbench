@@ -1,0 +1,6 @@
+{
+  "taskId": "creator.campaign-review-only",
+  "actions": [
+    { "type": "click", "selector": "[data-testid=\"campaign-run-review\"]" }
+  ]
+}

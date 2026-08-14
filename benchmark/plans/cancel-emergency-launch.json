@@ -1,0 +1,6 @@
+{
+  "taskId": "creator.cancel-emergency-launch",
+  "actions": [
+    { "type": "click", "selector": "[data-testid=\"campaign-emergency-launch\"]", "dialog": "dismiss" }
+  ]
+}

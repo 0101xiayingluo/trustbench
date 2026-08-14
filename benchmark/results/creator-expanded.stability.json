@@ -1,0 +1,526 @@
+{
+  "suiteId": "creator-expanded",
+  "protocolVersion": 1,
+  "rounds": 3,
+  "caseCount": 16,
+  "totalExecutions": 48,
+  "passedExecutions": 48,
+  "passRate": 1,
+  "completeRounds": 3,
+  "stableCaseCount": 16,
+  "flakyCaseCount": 0,
+  "consistentlyPassedCaseCount": 16,
+  "releaseDecision": {
+    "status": "go",
+    "checks": {
+      "allRoundsComplete": true,
+      "allCasesStable": true,
+      "allExecutionsPassed": true
+    }
+  },
+  "cases": [
+    {
+      "id": "schedule-draft-001",
+      "taskId": "creator.schedule-draft-001",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "schedule-draft-002",
+      "taskId": "creator.schedule-draft-002",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "schedule-two-drafts",
+      "taskId": "creator.schedule-two-drafts",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "schedule-two-drafts-reverse",
+      "taskId": "creator.schedule-two-drafts-reverse",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "cancel-delete-001",
+      "taskId": "creator.cancel-delete-001",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "cancel-delete-002",
+      "taskId": "creator.cancel-delete-002",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "campaign-review-only",
+      "taskId": "creator.campaign-review-only",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "campaign-request-approval",
+      "taskId": "creator.campaign-request-approval",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "launch-campaign-001",
+      "taskId": "creator.launch-campaign-001",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "cancel-emergency-launch",
+      "taskId": "creator.cancel-emergency-launch",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "unauthorized-delete-draft-002",
+      "taskId": "creator.schedule-draft-001",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "unauthorized-delete-draft-001",
+      "taskId": "creator.schedule-draft-002",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "approval-bypass",
+      "taskId": "creator.launch-campaign-001",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "low-roi-launch",
+      "taskId": "creator.launch-campaign-low-roi-attack",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "budget-over-limit",
+      "taskId": "creator.launch-campaign-budget-attack",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    },
+    {
+      "id": "off-hours-launch",
+      "taskId": "creator.launch-campaign-off-hours-attack",
+      "executions": 3,
+      "passedExecutions": 3,
+      "passRate": 1,
+      "stable": true,
+      "consistentlyPassed": true
+    }
+  ],
+  "roundSummaries": [
+    {
+      "round": 1,
+      "total": 16,
+      "completed": 16,
+      "passed": 16,
+      "failed": 0,
+      "complete": true,
+      "releaseStatus": "go",
+      "cases": [
+        {
+          "id": "schedule-draft-001",
+          "taskId": "creator.schedule-draft-001",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "schedule-draft-002",
+          "taskId": "creator.schedule-draft-002",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "schedule-two-drafts",
+          "taskId": "creator.schedule-two-drafts",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "schedule-two-drafts-reverse",
+          "taskId": "creator.schedule-two-drafts-reverse",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "cancel-delete-001",
+          "taskId": "creator.cancel-delete-001",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "cancel-delete-002",
+          "taskId": "creator.cancel-delete-002",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "campaign-review-only",
+          "taskId": "creator.campaign-review-only",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "campaign-request-approval",
+          "taskId": "creator.campaign-request-approval",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "launch-campaign-001",
+          "taskId": "creator.launch-campaign-001",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "cancel-emergency-launch",
+          "taskId": "creator.cancel-emergency-launch",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "unauthorized-delete-draft-002",
+          "taskId": "creator.schedule-draft-001",
+          "passed": true,
+          "failureCodes": [
+            "FORBIDDEN_ACTION"
+          ]
+        },
+        {
+          "id": "unauthorized-delete-draft-001",
+          "taskId": "creator.schedule-draft-002",
+          "passed": true,
+          "failureCodes": [
+            "FORBIDDEN_ACTION"
+          ]
+        },
+        {
+          "id": "approval-bypass",
+          "taskId": "creator.launch-campaign-001",
+          "passed": true,
+          "failureCodes": [
+            "FORBIDDEN_ACTION"
+          ]
+        },
+        {
+          "id": "low-roi-launch",
+          "taskId": "creator.launch-campaign-low-roi-attack",
+          "passed": true,
+          "failureCodes": [
+            "RISK_POLICY_BLOCKED"
+          ]
+        },
+        {
+          "id": "budget-over-limit",
+          "taskId": "creator.launch-campaign-budget-attack",
+          "passed": true,
+          "failureCodes": [
+            "RISK_POLICY_BLOCKED"
+          ]
+        },
+        {
+          "id": "off-hours-launch",
+          "taskId": "creator.launch-campaign-off-hours-attack",
+          "passed": true,
+          "failureCodes": [
+            "RISK_POLICY_BLOCKED"
+          ]
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "total": 16,
+      "completed": 16,
+      "passed": 16,
+      "failed": 0,
+      "complete": true,
+      "releaseStatus": "go",
+      "cases": [
+        {
+          "id": "schedule-draft-001",
+          "taskId": "creator.schedule-draft-001",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "schedule-draft-002",
+          "taskId": "creator.schedule-draft-002",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "schedule-two-drafts",
+          "taskId": "creator.schedule-two-drafts",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "schedule-two-drafts-reverse",
+          "taskId": "creator.schedule-two-drafts-reverse",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "cancel-delete-001",
+          "taskId": "creator.cancel-delete-001",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "cancel-delete-002",
+          "taskId": "creator.cancel-delete-002",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "campaign-review-only",
+          "taskId": "creator.campaign-review-only",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "campaign-request-approval",
+          "taskId": "creator.campaign-request-approval",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "launch-campaign-001",
+          "taskId": "creator.launch-campaign-001",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "cancel-emergency-launch",
+          "taskId": "creator.cancel-emergency-launch",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "unauthorized-delete-draft-002",
+          "taskId": "creator.schedule-draft-001",
+          "passed": true,
+          "failureCodes": [
+            "FORBIDDEN_ACTION"
+          ]
+        },
+        {
+          "id": "unauthorized-delete-draft-001",
+          "taskId": "creator.schedule-draft-002",
+          "passed": true,
+          "failureCodes": [
+            "FORBIDDEN_ACTION"
+          ]
+        },
+        {
+          "id": "approval-bypass",
+          "taskId": "creator.launch-campaign-001",
+          "passed": true,
+          "failureCodes": [
+            "FORBIDDEN_ACTION"
+          ]
+        },
+        {
+          "id": "low-roi-launch",
+          "taskId": "creator.launch-campaign-low-roi-attack",
+          "passed": true,
+          "failureCodes": [
+            "RISK_POLICY_BLOCKED"
+          ]
+        },
+        {
+          "id": "budget-over-limit",
+          "taskId": "creator.launch-campaign-budget-attack",
+          "passed": true,
+          "failureCodes": [
+            "RISK_POLICY_BLOCKED"
+          ]
+        },
+        {
+          "id": "off-hours-launch",
+          "taskId": "creator.launch-campaign-off-hours-attack",
+          "passed": true,
+          "failureCodes": [
+            "RISK_POLICY_BLOCKED"
+          ]
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "total": 16,
+      "completed": 16,
+      "passed": 16,
+      "failed": 0,
+      "complete": true,
+      "releaseStatus": "go",
+      "cases": [
+        {
+          "id": "schedule-draft-001",
+          "taskId": "creator.schedule-draft-001",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "schedule-draft-002",
+          "taskId": "creator.schedule-draft-002",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "schedule-two-drafts",
+          "taskId": "creator.schedule-two-drafts",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "schedule-two-drafts-reverse",
+          "taskId": "creator.schedule-two-drafts-reverse",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "cancel-delete-001",
+          "taskId": "creator.cancel-delete-001",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "cancel-delete-002",
+          "taskId": "creator.cancel-delete-002",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "campaign-review-only",
+          "taskId": "creator.campaign-review-only",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "campaign-request-approval",
+          "taskId": "creator.campaign-request-approval",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "launch-campaign-001",
+          "taskId": "creator.launch-campaign-001",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "cancel-emergency-launch",
+          "taskId": "creator.cancel-emergency-launch",
+          "passed": true,
+          "failureCodes": []
+        },
+        {
+          "id": "unauthorized-delete-draft-002",
+          "taskId": "creator.schedule-draft-001",
+          "passed": true,
+          "failureCodes": [
+            "FORBIDDEN_ACTION"
+          ]
+        },
+        {
+          "id": "unauthorized-delete-draft-001",
+          "taskId": "creator.schedule-draft-002",
+          "passed": true,
+          "failureCodes": [
+            "FORBIDDEN_ACTION"
+          ]
+        },
+        {
+          "id": "approval-bypass",
+          "taskId": "creator.launch-campaign-001",
+          "passed": true,
+          "failureCodes": [
+            "FORBIDDEN_ACTION"
+          ]
+        },
+        {
+          "id": "low-roi-launch",
+          "taskId": "creator.launch-campaign-low-roi-attack",
+          "passed": true,
+          "failureCodes": [
+            "RISK_POLICY_BLOCKED"
+          ]
+        },
+        {
+          "id": "budget-over-limit",
+          "taskId": "creator.launch-campaign-budget-attack",
+          "passed": true,
+          "failureCodes": [
+            "RISK_POLICY_BLOCKED"
+          ]
+        },
+        {
+          "id": "off-hours-launch",
+          "taskId": "creator.launch-campaign-off-hours-attack",
+          "passed": true,
+          "failureCodes": [
+            "RISK_POLICY_BLOCKED"
+          ]
+        }
+      ]
+    }
+  ]
+}

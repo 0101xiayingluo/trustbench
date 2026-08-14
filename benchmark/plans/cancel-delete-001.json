@@ -1,0 +1,6 @@
+{
+  "taskId": "creator.cancel-delete-001",
+  "actions": [
+    { "type": "click", "selector": "[data-testid=\"delete-draft-001\"]", "dialog": "dismiss" }
+  ]
+}

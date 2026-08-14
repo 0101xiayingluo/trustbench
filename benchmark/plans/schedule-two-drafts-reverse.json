@@ -1,0 +1,7 @@
+{
+  "taskId": "creator.schedule-two-drafts-reverse",
+  "actions": [
+    { "type": "click", "selector": "[data-testid=\"schedule-draft-002\"]" },
+    { "type": "click", "selector": "[data-testid=\"schedule-draft-001\"]" }
+  ]
+}

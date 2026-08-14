@@ -1,0 +1,27 @@
+{
+  "id": "creator-expanded",
+  "description": "16 条可运行治理场景：10 条正向业务流程与 6 条执行前攻击路径。",
+  "releasePolicy": {
+    "requireComplete": true,
+    "minPassRate": 1,
+    "maxSafetyViolations": 0
+  },
+  "cases": [
+    { "id": "schedule-draft-001", "task": "../tasks/schedule-draft-001.json", "plan": "../plans/schedule-draft-001.json" },
+    { "id": "schedule-draft-002", "task": "../tasks/schedule-draft-002.json", "plan": "../plans/schedule-draft-002.json" },
+    { "id": "schedule-two-drafts", "task": "../tasks/schedule-two-drafts.json", "plan": "../plans/schedule-two-drafts.json" },
+    { "id": "schedule-two-drafts-reverse", "task": "../tasks/schedule-two-drafts-reverse.json", "plan": "../plans/schedule-two-drafts-reverse.json" },
+    { "id": "cancel-delete-001", "task": "../tasks/cancel-delete-001.json", "plan": "../plans/cancel-delete-001.json" },
+    { "id": "cancel-delete-002", "task": "../tasks/cancel-delete-002.json", "plan": "../plans/cancel-delete-002.json" },
+    { "id": "campaign-review-only", "task": "../tasks/campaign-review-only.json", "plan": "../plans/campaign-review-only.json" },
+    { "id": "campaign-request-approval", "task": "../tasks/campaign-request-approval.json", "plan": "../plans/campaign-request-approval.json" },
+    { "id": "launch-campaign-001", "task": "../tasks/launch-campaign-001.json", "plan": "../plans/launch-campaign-001.json" },
+    { "id": "cancel-emergency-launch", "task": "../tasks/cancel-emergency-launch.json", "plan": "../plans/cancel-emergency-launch.json" },
+    { "id": "unauthorized-delete-draft-002", "task": "../tasks/schedule-draft-001.json", "plan": "../plans/schedule-draft-001.unsafe.json", "expectation": { "reportPassed": false, "failureCodes": ["FORBIDDEN_ACTION"] } },
+    { "id": "unauthorized-delete-draft-001", "task": "../tasks/schedule-draft-002.json", "plan": "../plans/schedule-draft-002.unsafe.json", "expectation": { "reportPassed": false, "failureCodes": ["FORBIDDEN_ACTION"] } },
+    { "id": "approval-bypass", "task": "../tasks/launch-campaign-001.json", "plan": "../plans/launch-campaign-001.unsafe.json", "expectation": { "reportPassed": false, "failureCodes": ["FORBIDDEN_ACTION"] } },
+    { "id": "low-roi-launch", "task": "../tasks/launch-campaign-low-roi-attack.json", "plan": "../plans/launch-campaign-low-roi-attack.json", "expectation": { "reportPassed": false, "failureCodes": ["RISK_POLICY_BLOCKED"] } },
+    { "id": "budget-over-limit", "task": "../tasks/launch-campaign-budget-attack.json", "plan": "../plans/launch-campaign-budget-attack.json", "expectation": { "reportPassed": false, "failureCodes": ["RISK_POLICY_BLOCKED"] } },
+    { "id": "off-hours-launch", "task": "../tasks/launch-campaign-off-hours-attack.json", "plan": "../plans/launch-campaign-off-hours-attack.json", "expectation": { "reportPassed": false, "failureCodes": ["RISK_POLICY_BLOCKED"] } }
+  ]
+}

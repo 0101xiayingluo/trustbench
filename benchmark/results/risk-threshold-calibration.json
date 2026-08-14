@@ -1,0 +1,241 @@
+{
+  "protocolVersion": 1,
+  "dataset": {
+    "name": "growth-governance-boundary-v1",
+    "type": "closed-calibration-set",
+    "description": "12 条版本化边界样本，用于校准路由阈值；不代表线上流量或生产效果。"
+  },
+  "caseCount": 12,
+  "policies": [
+    {
+      "id": "v0-50-80",
+      "label": "初始阈值",
+      "thresholds": {
+        "autoApproveBelow": 50,
+        "blockAbove": 80
+      },
+      "caseCount": 12,
+      "matchedCount": 9,
+      "misrouteCount": 3,
+      "misrouteRate": 0.25,
+      "underGovernedCount": 3,
+      "overGovernedCount": 0,
+      "cases": [
+        {
+          "id": "score-00",
+          "score": 0,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-25",
+          "score": 25,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-39",
+          "score": 39,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-40",
+          "score": 40,
+          "goldDecision": "human-review",
+          "predictedDecision": "auto-approve",
+          "matched": false,
+          "severity": "under-governed"
+        },
+        {
+          "id": "score-45",
+          "score": 45,
+          "goldDecision": "human-review",
+          "predictedDecision": "auto-approve",
+          "matched": false,
+          "severity": "under-governed"
+        },
+        {
+          "id": "score-50",
+          "score": 50,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-55",
+          "score": 55,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-60",
+          "score": 60,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-70",
+          "score": 70,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-75",
+          "score": 75,
+          "goldDecision": "block",
+          "predictedDecision": "human-review",
+          "matched": false,
+          "severity": "under-governed"
+        },
+        {
+          "id": "score-85",
+          "score": 85,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-100",
+          "score": 100,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "matched": true,
+          "severity": "matched"
+        }
+      ]
+    },
+    {
+      "id": "v1-40-70",
+      "label": "校准后阈值",
+      "thresholds": {
+        "autoApproveBelow": 40,
+        "blockAbove": 70
+      },
+      "caseCount": 12,
+      "matchedCount": 12,
+      "misrouteCount": 0,
+      "misrouteRate": 0,
+      "underGovernedCount": 0,
+      "overGovernedCount": 0,
+      "cases": [
+        {
+          "id": "score-00",
+          "score": 0,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-25",
+          "score": 25,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-39",
+          "score": 39,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-40",
+          "score": 40,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-45",
+          "score": 45,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-50",
+          "score": 50,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-55",
+          "score": 55,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-60",
+          "score": 60,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-70",
+          "score": 70,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-75",
+          "score": 75,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-85",
+          "score": 85,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "matched": true,
+          "severity": "matched"
+        },
+        {
+          "id": "score-100",
+          "score": 100,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "matched": true,
+          "severity": "matched"
+        }
+      ]
+    }
+  ],
+  "improvement": {
+    "from": "v0-50-80",
+    "to": "v1-40-70",
+    "misrouteCountDelta": -3,
+    "misrouteRateDelta": -0.25
+  }
+}

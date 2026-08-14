@@ -282,6 +282,28 @@
 .portfolio-cost-model p { margin: 14px 0 0; color: var(--portfolio-muted); font-size: 12px; line-height: 1.8; }
 .portfolio-cost-model p strong { color: var(--portfolio-ink); font-size: inherit; }
 
+.portfolio-calibration {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.42fr) minmax(300px, 0.7fr) minmax(260px, 0.88fr);
+  gap: 42px;
+  align-items: center;
+  margin-top: 34px;
+  padding-top: 34px;
+  border-top: 1px solid #cfd6d2;
+}
+.portfolio-calibration > div:first-child { display: grid; gap: 9px; }
+.portfolio-calibration > div:first-child span { color: var(--portfolio-red); font-size: 10px; font-weight: 800; }
+.portfolio-calibration > div:first-child strong { font-size: 18px; line-height: 1.5; }
+.portfolio-calibration p { margin: 0; color: var(--portfolio-muted); font-size: 12px; line-height: 1.8; }
+.portfolio-calibration > div:first-child p { font-size: 10px; }
+.calibration-comparison { display: grid; grid-template-columns: 1fr 28px 1fr; align-items: center; }
+.calibration-comparison > div:not(.calibration-arrow) { display: grid; gap: 4px; padding: 16px; border-left: 3px solid #c96356; background: #ffffff; }
+.calibration-comparison > div:last-child { border-left-color: var(--portfolio-green); }
+.calibration-comparison small { color: var(--portfolio-muted); font-size: 9px; font-weight: 700; }
+.calibration-comparison strong { font-size: 22px; }
+.calibration-comparison span { color: var(--portfolio-muted); font-size: 10px; }
+.calibration-arrow { color: var(--portfolio-muted); text-align: center; }
+
 .portfolio-demo-section {
   padding: 140px max(24px, calc((100% - 1180px) / 2));
   color: #eef3f0;
@@ -484,7 +506,7 @@
   .portfolio-proof-rail { margin-top: 34px; }
   .portfolio-section-heading h2 { font-size: 46px; }
   .portfolio-case-grid, .demo-workspace { grid-template-columns: 1fr; }
-  .portfolio-benchmark-layout, .portfolio-scenario-columns { grid-template-columns: 1fr; }
+  .portfolio-benchmark-layout, .portfolio-scenario-columns, .portfolio-calibration { grid-template-columns: 1fr; }
   .portfolio-case-grid { gap: 48px; }
   .portfolio-scenario-columns { gap: 54px; }
   .portfolio-flow { grid-template-columns: 1fr 1fr; }
@@ -527,6 +549,7 @@
   .portfolio-decision-list article p { grid-column: auto; }
   .portfolio-benchmark-method { min-height: 280px; padding: 24px; }
   .portfolio-cost-model { grid-template-columns: 1fr; gap: 20px; }
+  .portfolio-calibration { gap: 20px; }
   .demo-toolbar { align-items: flex-start; flex-direction: column; }
   .demo-presets { width: 100%; }
   .demo-preset { min-width: 0; flex: 1; padding: 0 6px; }

@@ -584,14 +584,14 @@ function Dashboard() {
             {governanceCases.length > 0 && (
               <section className="governance-baseline" aria-labelledby="governance-baseline-title">
                 <div className="section-heading-row">
-                  <div><h2 id="governance-baseline-title">治理基线对比</h2><p className="section-caption">同一组 5 条正向流程与 3 条攻击路径，分别对比仅观察和全部人审策略。</p></div>
-                  <span className="governance-protocol">8-CASE PROTOCOL</span>
+                  <div><h2 id="governance-baseline-title">治理基线对比</h2><p className="section-caption">同一组 {legitimateGovernanceCases.length} 条正向流程与 {dangerousGovernanceCases.length} 条攻击路径，分别对比无前置治理和全部人审策略。</p></div>
+                  <span className="governance-protocol">{governanceCases.length}-CASE PROTOCOL</span>
                 </div>
                 <div className="governance-metric-grid">
                   <div><span>误拦截率</span><strong>{falseBlockCases.length} / {legitimateGovernanceCases.length}</strong><small>正向流程被强制阻断</small></div>
                   <div><span>无效确认率</span><strong>{invalidReviewCases.length} / {trustbenchReviewCases.length}</strong><small>无需人审却进入确认</small></div>
                   <div><span>人工确认降幅</span><strong>{(reviewReduction * 100).toFixed(0)}%</strong><small>{legitimateGovernanceCases.length} 次全量人审 → {trustbenchReviewCases.length} 次按风险确认</small></div>
-                  <div><span>危险放行率</span><strong>{passedDangerousCases.length} / {dangerousGovernanceCases.length}</strong><small>仅观察基线为 {dangerousGovernanceCases.length} / {dangerousGovernanceCases.length}</small></div>
+                  <div><span>危险放行率</span><strong>{passedDangerousCases.length} / {dangerousGovernanceCases.length}</strong><small>无前置治理基线为 {dangerousGovernanceCases.length} / {dangerousGovernanceCases.length}</small></div>
                 </div>
               </section>
             )}

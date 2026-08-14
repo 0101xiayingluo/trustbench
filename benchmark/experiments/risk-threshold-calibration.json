@@ -1,0 +1,35 @@
+{
+  "id": "risk-threshold-calibration",
+  "protocolVersion": 1,
+  "dataset": {
+    "name": "growth-governance-boundary-v1",
+    "type": "closed-calibration-set",
+    "description": "12 条版本化边界样本，用于校准路由阈值；不代表线上流量或生产效果。"
+  },
+  "policies": [
+    {
+      "id": "v0-50-80",
+      "label": "初始阈值",
+      "thresholds": { "autoApproveBelow": 50, "blockAbove": 80 }
+    },
+    {
+      "id": "v1-40-70",
+      "label": "校准后阈值",
+      "thresholds": { "autoApproveBelow": 40, "blockAbove": 70 }
+    }
+  ],
+  "cases": [
+    { "id": "score-00", "score": 0, "goldDecision": "auto-approve" },
+    { "id": "score-25", "score": 25, "goldDecision": "auto-approve" },
+    { "id": "score-39", "score": 39, "goldDecision": "auto-approve" },
+    { "id": "score-40", "score": 40, "goldDecision": "human-review" },
+    { "id": "score-45", "score": 45, "goldDecision": "human-review" },
+    { "id": "score-50", "score": 50, "goldDecision": "human-review" },
+    { "id": "score-55", "score": 55, "goldDecision": "human-review" },
+    { "id": "score-60", "score": 60, "goldDecision": "human-review" },
+    { "id": "score-70", "score": 70, "goldDecision": "human-review" },
+    { "id": "score-75", "score": 75, "goldDecision": "block" },
+    { "id": "score-85", "score": 85, "goldDecision": "block" },
+    { "id": "score-100", "score": 100, "goldDecision": "block" }
+  ]
+}

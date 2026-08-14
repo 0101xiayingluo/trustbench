@@ -250,7 +250,9 @@ async function experimentCatalog() {
       .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
       .map(async (entry) => JSON.parse(await readFile(resolve(benchmarkExperiments, entry.name), 'utf8'))),
   )
-  return experiments.sort((a, b) => String(a.id).localeCompare(String(b.id)))
+  return experiments
+    .filter((experiment) => Array.isArray(experiment.routes) && Array.isArray(experiment.decisionMetrics))
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
 }
 
 function publicTask(task: TaskDescriptor) {

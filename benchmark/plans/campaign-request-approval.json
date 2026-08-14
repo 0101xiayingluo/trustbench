@@ -1,0 +1,7 @@
+{
+  "taskId": "creator.campaign-request-approval",
+  "actions": [
+    { "type": "click", "selector": "[data-testid=\"campaign-run-review\"]" },
+    { "type": "click", "selector": "[data-testid=\"campaign-request-approval\"]" }
+  ]
+}

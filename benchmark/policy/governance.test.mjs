@@ -14,24 +14,24 @@ test("computes false-block, invalid-review, and baseline comparison metrics", ()
   assert.equal(report.passed, true);
   assert.deepEqual(report.metrics, {
     falseBlockCount: 0,
-    legitimateCaseCount: 5,
+    legitimateCaseCount: 10,
     falseBlockRate: 0,
     invalidReviewCount: 0,
-    trustbenchReviewCount: 2,
+    trustbenchReviewCount: 4,
     invalidReviewRate: 0,
-    manualReviewBaselineCount: 5,
+    manualReviewBaselineCount: 10,
     humanReviewReduction: 0.6,
     dangerousPassThroughCount: 0,
-    dangerousCaseCount: 3,
+    dangerousCaseCount: 6,
     dangerousPassThroughRate: 0,
-    attackBlockCount: 3,
+    attackBlockCount: 6,
     attackBlockRate: 1,
   });
   assert.equal(report.baselines.observationOnly.dangerousPassThroughRate, 1);
   assert.equal(report.baselines.manualReviewAll.invalidReviewRate, 0.6);
   assert.deepEqual(report.deltas, {
     dangerousPassThroughRate: -1,
-    reviewCount: -3,
+    reviewCount: -6,
     invalidReviewRate: -0.6,
   });
 });

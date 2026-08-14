@@ -29,6 +29,9 @@ jobs:
       - run: npm run test:e2e
       - run: npm run test:regression
       - run: npm run test:adversarial
+      - run: npm run benchmark:governance
+      - run: npm run benchmark:calibration
+      - run: npm run test:stability -- --browser chromium
       - uses: actions/upload-artifact@v4
         with:
           name: creator-studio-dist

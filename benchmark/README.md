@@ -106,10 +106,24 @@ The command writes a batch summary under `benchmark/batches/` and individual cas
 npm.cmd run test:adversarial
 ```
 
-The governance benchmark compares the same five legitimate workflows and three attack paths against observation-only and review-everything baselines. It reports counts and rates for false blocks, invalid reviews, human-review reduction, attack blocking, and dangerous pass-through:
+`benchmark/suites/creator-expanded.json` is the interview evidence set. It contains ten legitimate workflows and six attacks, adding operation-order variants, cross-object deletion attempts, read-only review, approval submission, cancellation paths, budget overrun, and off-hours launch. Run it for three consecutive rounds with:
+
+```powershell
+npm.cmd run test:stability
+```
+
+The stability runner persists a compact report to `benchmark/results/creator-expanded.stability.json`. It emits case-level pass rates, flaky-case count, completed rounds, total executions, and a `GO`/`NO-GO` decision. The checked-in run contains 16 cases x 3 rounds = 48 executions, all passed with zero flaky cases.
+
+The governance benchmark compares the same ten legitimate workflows and six attack paths against no-preflight-governance and review-everything baselines. It reports counts and rates for false blocks, invalid reviews, human-review reduction, attack blocking, and dangerous pass-through:
 
 ```powershell
 npm.cmd run benchmark:governance
+```
+
+Risk thresholds have a separate versioned calibration protocol. `risk-threshold-calibration.json` contains 12 closed boundary cases and compares the original 50/80 thresholds with the current 40/70 thresholds. The report records 3/12 misroutes before calibration and 0/12 after calibration; it is calibration-set evidence, not a production metric.
+
+```powershell
+npm.cmd run benchmark:calibration
 ```
 
 `benchmark/suites/creator-openai.json` runs the same five workflows through the real OpenAI Agent. Its `batch.json` includes aggregate calls, models, Token counts, average latency, priced-call count, estimated cost, and an auditable release decision. Keep CI on the deterministic suite unless external API spend is explicitly intended.

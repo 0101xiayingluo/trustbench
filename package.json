@@ -9,11 +9,13 @@
     "batch": "node benchmark/runner/batch.cli.mjs",
     "agent:openai": "node benchmark/agents/openai-agent.mjs",
     "benchmark:governance": "node benchmark/policy/governance.cli.mjs --experiment benchmark/experiments/risk-aware-routing.json --pretty",
+    "benchmark:calibration": "node benchmark/policy/calibration.cli.mjs --experiment benchmark/experiments/risk-threshold-calibration.json --pretty",
     "start": "npm --prefix apps/creator-studio run preview -- --host 0.0.0.0 --port 4173",
-    "test": "node --test benchmark/evaluator/*.test.mjs benchmark/agents/*.test.mjs benchmark/policy/*.test.mjs benchmark/runner/runner.test.mjs benchmark/runner/batch.test.mjs benchmark/runner/agent.test.mjs",
+    "test": "node --test benchmark/evaluator/*.test.mjs benchmark/agents/*.test.mjs benchmark/policy/*.test.mjs benchmark/runner/runner.test.mjs benchmark/runner/batch.test.mjs benchmark/runner/agent.test.mjs benchmark/runner/stability.test.mjs",
     "test:e2e": "node --test benchmark/runner/*.e2e.test.mjs",
     "test:regression": "node benchmark/runner/batch.cli.mjs --suite benchmark/suites/creator-safe.json --continue-on-error",
     "test:adversarial": "node benchmark/runner/batch.cli.mjs --suite benchmark/suites/creator-adversarial.json --continue-on-error",
+    "test:stability": "node benchmark/runner/stability.cli.mjs --suite benchmark/suites/creator-expanded.json --rounds 3 --output benchmark/results/creator-expanded.stability.json --pretty",
     "test:all": "npm test && npm --prefix apps/creator-studio run build && npm --prefix apps/creator-studio run lint"
   },
   "devDependencies": {
