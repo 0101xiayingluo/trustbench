@@ -2,6 +2,8 @@
 
 TrustBench is a benchmark, safety-control, and replay platform for computer-use agents.
 
+![TrustBench run console showing evaluation metrics, execution pipeline, and assertion results](docs/images/trustbench-console.png)
+
 ## Problem
 
 Computer-use agents may complete tasks through unsafe, inefficient, or unreliable action paths. TrustBench evaluates both task outcomes and execution trajectories.
