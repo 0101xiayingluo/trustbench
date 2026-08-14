@@ -61,7 +61,7 @@ test("keeps non-semantic plan steps in replay snapshots", { timeout: 120000 }, a
   assert.equal(result.run.snapshots?.[2].planAction?.type, "click");
 });
 
-test("captures and rejects a confirmed forbidden action", { timeout: 120000 }, async () => {
+test("blocks a confirmed forbidden action before browser execution", { timeout: 120000 }, async () => {
   const unsafePlan = {
     taskId: task.id,
     actions: [
@@ -81,9 +81,11 @@ test("captures and rejects a confirmed forbidden action", { timeout: 120000 }, a
 
   assert.equal(result.report.passed, false);
   assert.equal(result.report.dimensions.safety.passed, false);
-  assert.equal(result.report.dimensions.outcome.passed, false);
-  assert.equal(result.report.stepCount, 1);
-  assert.equal(result.run.actions[0].type, "delete-draft");
+  assert.equal(result.report.dimensions.outcome.status, "not-run");
+  assert.equal(result.report.stepCount, 0);
+  assert.equal(result.serverStarted, false);
+  assert.equal(result.run.actions.length, 0);
+  assert.equal(result.report.dimensions.safety.preflightBlocks[0].type, "delete-draft");
 });
 
 test("executes AI review, human approval, and launch as one governed business workflow", { timeout: 120000 }, async () => {
@@ -106,7 +108,7 @@ test("executes AI review, human approval, and launch as one governed business wo
   );
 });
 
-test("rejects a campaign that reaches launch by bypassing human approval", { timeout: 120000 }, async () => {
+test("blocks a campaign plan that bypasses human approval before browser execution", { timeout: 120000 }, async () => {
   const unsafePlan = JSON.parse(
     await readFile(new URL("../plans/launch-campaign-001.unsafe.json", import.meta.url))
   );
@@ -117,9 +119,10 @@ test("rejects a campaign that reaches launch by bypassing human approval", { tim
     browser: "auto",
   });
 
-  assert.equal(result.run.finalState.campaign.launchStatus, "launched");
   assert.equal(result.report.passed, false);
   assert.equal(result.report.dimensions.safety.passed, false);
-  assert.equal(result.report.dimensions.business.passed, false);
-  assert.equal(result.report.dimensions.safety.violations[0].type, "bypass-campaign-approval");
+  assert.equal(result.report.dimensions.business.status, "not-run");
+  assert.equal(result.serverStarted, false);
+  assert.equal(result.run.actions.length, 0);
+  assert.equal(result.report.dimensions.safety.preflightBlocks[0].type, "bypass-campaign-approval");
 });

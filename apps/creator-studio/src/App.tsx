@@ -67,7 +67,7 @@ const safeRun: RecordedRun = {
 };
 
 const safeReport: EvaluationReport = {
-  evaluatorVersion: 2,
+  evaluatorVersion: 4,
   task: { id: safeRun.taskId, version: 1, riskLevel: "medium" },
   passed: true,
   score: 1,
@@ -244,8 +244,9 @@ function Dashboard() {
   const run = selectedRecord.run;
   const report = selectedRecord.report;
   const policyBlocks = report.dimensions.safety.policyBlocks ?? [];
-  const isPolicyBlocked = policyBlocks.length > 0;
-  const replayStepCount = isPolicyBlocked ? 0 : Math.max(
+  const preflightBlocks = report.dimensions.safety.preflightBlocks ?? [];
+  const isExecutionBlocked = policyBlocks.length > 0 || preflightBlocks.length > 0;
+  const replayStepCount = isExecutionBlocked ? 0 : Math.max(
       run.stepCount,
       run.planActions?.length ?? 0,
       (run.snapshots?.length ?? 1) - 1,
@@ -374,6 +375,7 @@ function Dashboard() {
   const failedAssertionCount = failedChecks.length
     + report.dimensions.safety.violations.length
     + policyBlocks.length
+    + preflightBlocks.length
     + (report.dimensions.efficiency.passed ? 0 : 1)
     + (report.dimensions.business?.checks.filter((check) => !check.passed).length ?? 0);
   const visibleRunRecords = useMemo(
@@ -387,6 +389,16 @@ function Dashboard() {
   const releaseDecision = decisionBatch?.summary.releaseDecision ?? sampleDecision;
   const decisionIsSample = !decisionBatch;
   const activeExperiment = experiments[0];
+  const governanceCases = activeExperiment?.governanceBenchmark?.cases ?? [];
+  const legitimateGovernanceCases = governanceCases.filter((entry) => entry.cohort === "legitimate");
+  const dangerousGovernanceCases = governanceCases.filter((entry) => entry.cohort === "dangerous");
+  const trustbenchReviewCases = legitimateGovernanceCases.filter((entry) => entry.trustbenchDecision === "human-review");
+  const invalidReviewCases = trustbenchReviewCases.filter((entry) => !entry.humanReviewRequired);
+  const falseBlockCases = legitimateGovernanceCases.filter((entry) => entry.trustbenchDecision === "block");
+  const passedDangerousCases = dangerousGovernanceCases.filter((entry) => entry.trustbenchDecision !== "block");
+  const reviewReduction = legitimateGovernanceCases.length > 0
+    ? 1 - trustbenchReviewCases.length / legitimateGovernanceCases.length
+    : 0;
   const isRunDetailView = view === "overview" || view === "replay" || view === "compare";
   const pageTitle = view === "tasks" ? "任务中心" : view === "decision" ? "发布决策" : view === "replay" ? "轨迹回放" : view === "compare" ? "运行对比" : "运行详情";
   const pageMeta = view === "tasks"
@@ -569,6 +581,21 @@ function Dashboard() {
               </section>
             </div>
 
+            {governanceCases.length > 0 && (
+              <section className="governance-baseline" aria-labelledby="governance-baseline-title">
+                <div className="section-heading-row">
+                  <div><h2 id="governance-baseline-title">治理基线对比</h2><p className="section-caption">同一组 5 条正向流程与 3 条攻击路径，分别对比仅观察和全部人审策略。</p></div>
+                  <span className="governance-protocol">8-CASE PROTOCOL</span>
+                </div>
+                <div className="governance-metric-grid">
+                  <div><span>误拦截率</span><strong>{falseBlockCases.length} / {legitimateGovernanceCases.length}</strong><small>正向流程被强制阻断</small></div>
+                  <div><span>无效确认率</span><strong>{invalidReviewCases.length} / {trustbenchReviewCases.length}</strong><small>无需人审却进入确认</small></div>
+                  <div><span>人工确认降幅</span><strong>{(reviewReduction * 100).toFixed(0)}%</strong><small>{legitimateGovernanceCases.length} 次全量人审 → {trustbenchReviewCases.length} 次按风险确认</small></div>
+                  <div><span>危险放行率</span><strong>{passedDangerousCases.length} / {dangerousGovernanceCases.length}</strong><small>仅观察基线为 {dangerousGovernanceCases.length} / {dangerousGovernanceCases.length}</small></div>
+                </div>
+              </section>
+            )}
+
             <div className="business-scenario-strip">
               <span>复杂业务样例</span>
               <strong>增长活动配置与上线</strong>
@@ -719,9 +746,9 @@ function Dashboard() {
               <div className="metric-item">
                 <span className="metric-label">安全检查</span>
                 <strong className={report.dimensions.safety.passed ? "metric-value metric-pass" : "metric-value metric-fail"}>
-                  {policyBlocks.length > 0 ? `${policyBlocks.length} 拦截` : `${report.dimensions.safety.violations.length} 违规`}
+                  {isExecutionBlocked ? `${policyBlocks.length + preflightBlocks.length} 拦截` : `${report.dimensions.safety.violations.length} 违规`}
                 </strong>
-                <span className="metric-note">{policyBlocks.length > 0 ? "浏览器执行前已阻断" : report.dimensions.safety.passed ? "未触发禁止动作" : "命中禁止动作"}</span>
+                <span className="metric-note">{isExecutionBlocked ? "浏览器执行前已阻断" : report.dimensions.safety.passed ? "未触发禁止动作" : "命中禁止动作"}</span>
               </div>
               <div className="metric-item">
                 <span className="metric-label">执行步数</span>
@@ -784,7 +811,7 @@ function Dashboard() {
 
             <h2>执行流水线</h2>
             <div className="pipeline" aria-label="执行流水线">
-              {(isPolicyBlocked
+              {(isExecutionBlocked
                 ? ["风险评分", "策略拦截", "模型未调用", "浏览器未启动"]
                 : ["启动环境", "创建浏览器", "执行计划", "采集状态", "自动评测"]
               ).map((stage) => (
@@ -814,9 +841,9 @@ function Dashboard() {
                     </tr>
                   ))}
                   <tr>
-                    <td className="code-text">{policyBlocks.length > 0 ? "riskPolicy" : "forbiddenActions"}</td>
-                    <td>{policyBlocks.length > 0 ? `风险分 ≤ ${policyBlocks[0].threshold}` : report.dimensions.safety.forbiddenActions?.length ? `无 ${report.dimensions.safety.forbiddenActions.join("、")}` : "无禁止动作"}</td>
-                    <td>{policyBlocks.length > 0 ? `风险分 ${policyBlocks[0].score}，前置拦截` : `${report.dimensions.safety.violations.length} 次`}</td>
+                    <td className="code-text">{policyBlocks.length > 0 ? "riskPolicy" : preflightBlocks.length > 0 ? "planPreflight" : "forbiddenActions"}</td>
+                    <td>{policyBlocks.length > 0 ? `风险分 ≤ ${policyBlocks[0].threshold}` : preflightBlocks.length > 0 ? `无 ${preflightBlocks.map((block) => block.type).join("、")}` : report.dimensions.safety.forbiddenActions?.length ? `无 ${report.dimensions.safety.forbiddenActions.join("、")}` : "无禁止动作"}</td>
+                    <td>{policyBlocks.length > 0 ? `风险分 ${policyBlocks[0].score}，前置拦截` : preflightBlocks.length > 0 ? `${preflightBlocks.length} 个计划动作已拦截` : `${report.dimensions.safety.violations.length} 次`}</td>
                     <td><StatusMark passed={report.dimensions.safety.passed} />{report.dimensions.safety.passed ? "通过" : "失败"}</td>
                   </tr>
                   {report.dimensions.business?.checks.map((check) => (
@@ -831,7 +858,7 @@ function Dashboard() {
               </table>
             </div>
             <div className="footer-line">
-              <span>环境 {isPolicyBlocked ? "未启动" : "creator-default"}</span><span>浏览器 {isPolicyBlocked ? "未启动" : "Edge"}</span><span>步数 {report.stepCount}</span>{run.agent && <span>模型 {run.agent.model}</span>}<span>报告 report.json</span>
+              <span>环境 {isExecutionBlocked ? "未启动" : "creator-default"}</span><span>浏览器 {isExecutionBlocked ? "未启动" : "Edge"}</span><span>步数 {report.stepCount}</span>{run.agent && <span>模型 {run.agent.model}</span>}<span>报告 report.json</span>
             </div>
           </section>
         )}
@@ -841,11 +868,13 @@ function Dashboard() {
             <div className="replay-layout">
               <div className="sandbox-preview">
                 <div className="preview-head"><strong>创作者工作台</strong><span>快照 {currentReplayStep} / {replayStepCount}</span></div>
-                {isPolicyBlocked ? (
+                {isExecutionBlocked ? (
                   <div className="policy-blocked-preview">
-                    <span>RISK_POLICY_BLOCKED</span>
+                    <span>{policyBlocks.length > 0 ? "RISK_POLICY_BLOCKED" : "FORBIDDEN_ACTION"}</span>
                     <strong>执行前已阻断</strong>
-                    <p>风险分 {policyBlocks[0].score} 超过阈值 {policyBlocks[0].threshold}，未创建浏览器状态快照。</p>
+                    <p>{policyBlocks.length > 0
+                      ? `风险分 ${policyBlocks[0].score} 超过阈值 ${policyBlocks[0].threshold}，未创建浏览器状态快照。`
+                      : `计划包含禁止动作 ${preflightBlocks.map((block) => block.type).join("、")}，未启动浏览器。`}</p>
                   </div>
                 ) : (
                   <div className="preview-body">
@@ -863,7 +892,7 @@ function Dashboard() {
               <div className="trace-panel">
                 <h2>动作轨迹</h2>
                 <div className="trace-list">
-                  <div className={currentReplayStep === 0 ? "trace-item trace-item-active" : "trace-item"}><span className="trace-dot" /><strong>{isPolicyBlocked ? "策略前置拦截" : "初始状态"}</strong><small>{isPolicyBlocked ? `风险分 ${policyBlocks[0].score}，浏览器未启动` : `${initialDraftCount} 条内容，draft-001 为${initialDraftStatuses["draft-001"] ?? "不存在"}`}</small></div>
+                  <div className={currentReplayStep === 0 ? "trace-item trace-item-active" : "trace-item"}><span className="trace-dot" /><strong>{isExecutionBlocked ? "策略前置拦截" : "初始状态"}</strong><small>{policyBlocks.length > 0 ? `风险分 ${policyBlocks[0].score}，浏览器未启动` : preflightBlocks.length > 0 ? `禁止动作 ${preflightBlocks.map((block) => block.type).join("、")}，浏览器未启动` : `${initialDraftCount} 条内容，draft-001 为${initialDraftStatuses["draft-001"] ?? "不存在"}`}</small></div>
                   {replayActions.map((action, index) => (
                     <div className={currentReplayStep === index + 1 ? "trace-item trace-item-active" : "trace-item"} key={`${index + 1}-${action.type}-${action.selector}`}>
                       <span className="trace-dot" /><strong>{formatPlanAction(action)}</strong><small className="code-text">{action.type} · {action.selector}</small>

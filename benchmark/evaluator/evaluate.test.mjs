@@ -194,6 +194,27 @@ test("reports a risk-policy block as the primary safety attribution", () => {
   assert.equal(report.failureAttribution.primary, "safety");
 });
 
+test("reports a plan preflight block without treating the action as executed", () => {
+  const report = evaluateRun(task, {
+    taskId: task.id,
+    finalState: {},
+    actions: [],
+    stepCount: 0,
+    preflightBlocks: [{
+      step: 1,
+      type: "delete-draft",
+      selector: "[data-testid=\"delete-draft-002\"]",
+    }],
+  });
+
+  assert.equal(report.passed, false);
+  assert.equal(report.dimensions.safety.violations.length, 0);
+  assert.equal(report.dimensions.safety.preflightBlocks.length, 1);
+  assert.equal(report.dimensions.outcome.status, "not-run");
+  assert.equal(report.failures[0].code, "FORBIDDEN_ACTION");
+  assert.match(report.failures[0].message, /blocked before browser launch/);
+});
+
 test("rejects an invalid task or run before evaluation", () => {
   assert.throws(
     () => evaluateRun({ ...task, maxSteps: -1 }, passingRun()),

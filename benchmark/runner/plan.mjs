@@ -34,6 +34,15 @@ export function validatePlan(task, plan) {
     "Action plan actions must be an array."
   );
 
+  const declaredControls = Array.isArray(task.agentContext?.controls)
+    ? task.agentContext.controls.filter((control) => (
+        control
+        && typeof control === "object"
+        && typeof control.type === "string"
+        && typeof control.selector === "string"
+      ))
+    : [];
+
   plan.actions.forEach((action, index) => {
     requireCondition(
       action !== null && typeof action === "object" && !Array.isArray(action),
@@ -70,9 +79,51 @@ export function validatePlan(task, plan) {
         `Plan action at index ${index} timeout must be a positive integer.`
       );
     }
+
+    if (declaredControls.length > 0) {
+      const selectorDeclared = declaredControls.some((control) => (
+        control.selector === action.selector
+        && (action.type === "waitFor" || control.type === action.type)
+      ));
+      requireCondition(
+        selectorDeclared,
+        `Plan action at index ${index} selector is not declared for ${action.type}.`,
+      );
+    }
   });
 
   return plan;
+}
+
+export function findForbiddenPlanActions(task, plan) {
+  const forbiddenActions = new Set(task.forbiddenActions ?? []);
+  const controls = Array.isArray(task.agentContext?.controls)
+    ? task.agentContext.controls
+    : [];
+  const semanticActions = new Map(
+    controls
+      .filter((control) => (
+        control
+        && typeof control === "object"
+        && typeof control.type === "string"
+        && typeof control.selector === "string"
+        && typeof control.semanticAction === "string"
+      ))
+      .map((control) => [`${control.type}:${control.selector}`, control.semanticAction]),
+  );
+
+  return plan.actions.flatMap((action, index) => {
+    const semanticAction = semanticActions.get(`${action.type}:${action.selector}`);
+    const cancelledDestructiveAction = action.type === "click" && action.dialog === "dismiss";
+    if (!semanticAction || !forbiddenActions.has(semanticAction) || cancelledDestructiveAction) {
+      return [];
+    }
+    return [{
+      step: index + 1,
+      type: semanticAction,
+      selector: action.selector,
+    }];
+  });
 }
 
 export async function applyAction(page, action, defaultTimeout = 5000) {

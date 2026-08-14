@@ -2554,6 +2554,49 @@ body {
   border-bottom: 1px solid var(--console-border);
 }
 
+.governance-baseline {
+  padding-top: 24px;
+  border-top: 1px solid var(--console-border);
+}
+
+.governance-protocol {
+  color: var(--console-blue);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.governance-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--console-border);
+  border-radius: 8px;
+  background: var(--console-border);
+}
+
+.governance-metric-grid > div {
+  display: grid;
+  min-width: 0;
+  min-height: 108px;
+  align-content: center;
+  gap: 6px;
+  padding: 16px;
+  background: var(--console-surface);
+}
+
+.governance-metric-grid span,
+.governance-metric-grid small {
+  color: var(--console-muted);
+  font-size: 10px;
+}
+
+.governance-metric-grid strong {
+  color: var(--console-green);
+  font-size: 22px;
+}
+
 .attribution-primary {
   color: var(--console-red);
   font-size: 11px;
@@ -2652,7 +2695,8 @@ body {
   }
 
   .decision-kpi-grid,
-  .decision-content-grid {
+  .decision-content-grid,
+  .governance-metric-grid {
     grid-template-columns: 1fr 1fr;
   }
 

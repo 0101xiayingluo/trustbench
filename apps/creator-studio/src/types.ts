@@ -92,6 +92,11 @@ export type EvaluationReport = {
         threshold: number | null;
         activeSignals: Array<{ id: string; label: string; weight: number; active: boolean }>;
       }>;
+      preflightBlocks?: Array<{
+        step: number;
+        type: string;
+        selector: string;
+      }>;
     };
     efficiency: {
       passed: boolean;
@@ -214,6 +219,20 @@ export type ExperimentDescriptor = {
   }>;
   decisionMetrics: string[];
   releaseSuite: string;
+  governanceBenchmark?: {
+    definitions: Record<string, string>;
+    cases: Array<{
+      id: string;
+      label: string;
+      cohort: "legitimate" | "dangerous";
+      trustbenchDecision: "auto-approve" | "human-review" | "block";
+      humanReviewRequired: boolean;
+      businessEvidence?: string;
+      failureCode?: string;
+      blockStage?: string;
+      attackDesign?: string;
+    }>;
+  };
 };
 
 export type RunSnapshot = {

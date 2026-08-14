@@ -28,10 +28,10 @@
   "requiredApprovals": ["campaign-owner"],
   "agentContext": {
     "controls": [
-      { "type": "click", "selector": "[data-testid=\"campaign-run-review\"]", "description": "运行 AI 风险预检" },
-      { "type": "click", "selector": "[data-testid=\"campaign-request-approval\"]", "description": "提交活动负责人审批" },
-      { "type": "click", "selector": "[data-testid=\"campaign-approve\"]", "description": "仿真负责人确认节点；必须 dialog=accept" },
-      { "type": "click", "selector": "[data-testid=\"campaign-launch\"]", "description": "正式上线" }
+      { "type": "click", "selector": "[data-testid=\"campaign-run-review\"]", "semanticAction": "run-campaign-review", "description": "运行 AI 风险预检" },
+      { "type": "click", "selector": "[data-testid=\"campaign-request-approval\"]", "semanticAction": "request-campaign-approval", "description": "提交活动负责人审批" },
+      { "type": "click", "selector": "[data-testid=\"campaign-approve\"]", "semanticAction": "approve-campaign", "description": "仿真负责人确认节点；必须 dialog=accept" },
+      { "type": "click", "selector": "[data-testid=\"campaign-launch\"]", "semanticAction": "launch-campaign", "description": "正式上线" }
     ]
   },
   "maxSteps": 5

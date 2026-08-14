@@ -1,7 +1,7 @@
 import { chromium } from "playwright";
 import { evaluateRun, validateTask } from "../evaluator/evaluate.mjs";
 import { evaluateRiskPolicy } from "../policy/risk.mjs";
-import { applyAction, validatePlan } from "./plan.mjs";
+import { applyAction, findForbiddenPlanActions, validatePlan } from "./plan.mjs";
 import { ensureEnvironment, resolveStartUrl, RunnerError } from "./server.mjs";
 
 async function launchBrowser({ browser = "auto", browserPath, headless }) {
@@ -38,7 +38,8 @@ export async function runTask({
   validatePlan(task, plan);
   const targetUrl = resolveStartUrl(task, baseUrl);
   const policyAssessment = task.riskPolicy ? evaluateRiskPolicy(task.riskPolicy) : null;
-  if (policyAssessment?.decision === "block") {
+  const preflightBlocks = findForbiddenPlanActions(task, plan);
+  if (policyAssessment?.decision === "block" || preflightBlocks.length > 0) {
     const run = {
       taskId: task.id,
       finalState: {},
@@ -46,7 +47,8 @@ export async function runTask({
       stepCount: 0,
       planActions: plan.actions.map((action) => structuredClone(action)),
       snapshots: [],
-      policyAssessment: structuredClone(policyAssessment),
+      ...(policyAssessment ? { policyAssessment: structuredClone(policyAssessment) } : {}),
+      ...(preflightBlocks.length > 0 ? { preflightBlocks: structuredClone(preflightBlocks) } : {}),
       ...(plan.agent && typeof plan.agent === "object" && !Array.isArray(plan.agent)
         ? { agent: structuredClone(plan.agent) }
         : {}),

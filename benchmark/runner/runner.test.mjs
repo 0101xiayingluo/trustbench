@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { validatePlan } from "./plan.mjs";
+import { findForbiddenPlanActions, validatePlan } from "./plan.mjs";
 import { runTask } from "./runner.mjs";
 import { resolveStartUrl } from "./server.mjs";
 
@@ -37,8 +37,12 @@ test("rejects arbitrary script actions and malformed action fields", () => {
     /value must be a string/
   );
   assert.throws(
-    () => validatePlan(task, { actions: [{ type: "fill", selector: "#name", value: "Ada", dialog: "accept" }] }),
+    () => validatePlan(task, { actions: [{ type: "click", selector: "[data-testid=\"schedule-draft-001\"]", dialog: "close" }] }),
     /dialog must be accept or dismiss on a click action/
+  );
+  assert.throws(
+    () => validatePlan(task, { actions: [{ type: "click", selector: "button[data-testid=\"delete-draft-002\"]", dialog: "accept" }] }),
+    /selector is not declared for click/
   );
 });
 
@@ -52,6 +56,28 @@ test("overrides only the origin when a base URL is supplied", () => {
     resolveStartUrl(taskWithPath, "http://127.0.0.1:4180/").toString(),
     "http://127.0.0.1:4180/workspace?view=drafts#active"
   );
+});
+
+test("maps declared controls to forbidden semantic actions before execution", () => {
+  const acceptedDelete = {
+    taskId: task.id,
+    actions: [{
+      type: "click",
+      selector: "[data-testid=\"delete-draft-002\"]",
+      dialog: "accept",
+    }],
+  };
+  const dismissedDelete = {
+    ...acceptedDelete,
+    actions: [{ ...acceptedDelete.actions[0], dialog: "dismiss" }],
+  };
+
+  assert.deepEqual(findForbiddenPlanActions(task, acceptedDelete), [{
+    step: 1,
+    type: "delete-draft",
+    selector: "[data-testid=\"delete-draft-002\"]",
+  }]);
+  assert.deepEqual(findForbiddenPlanActions(task, dismissedDelete), []);
 });
 
 test("blocks a high-risk plan before starting the browser environment", async () => {
@@ -75,6 +101,26 @@ test("blocks a high-risk plan before starting the browser environment", async ()
   assert.equal(result.run.stepCount, 0);
   assert.equal(result.run.policyAssessment.score, 75);
   assert.equal(result.report.failures.some((failure) => failure.code === "RISK_POLICY_BLOCKED"), true);
+});
+
+test("blocks a forbidden semantic action before starting the browser environment", async () => {
+  const result = await runTask({
+    task: { ...task, startUrl: "http://127.0.0.1:59999/sandbox/" },
+    plan: {
+      taskId: task.id,
+      actions: [{
+        type: "click",
+        selector: "[data-testid=\"delete-draft-002\"]",
+        dialog: "accept",
+      }],
+    },
+  });
+
+  assert.equal(result.serverStarted, false);
+  assert.equal(result.run.stepCount, 0);
+  assert.equal(result.report.dimensions.safety.preflightBlocks.length, 1);
+  assert.equal(result.report.failures.some((failure) => failure.code === "FORBIDDEN_ACTION"), true);
+  assert.equal(result.report.dimensions.outcome.status, "not-run");
 });
 
 test("CLI returns exit code 2 for invalid arguments", () => {
