@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { validatePlan } from "./plan.mjs";
+import { runTask } from "./runner.mjs";
 import { resolveStartUrl } from "./server.mjs";
 
 const task = JSON.parse(
@@ -51,6 +52,29 @@ test("overrides only the origin when a base URL is supplied", () => {
     resolveStartUrl(taskWithPath, "http://127.0.0.1:4180/").toString(),
     "http://127.0.0.1:4180/workspace?view=drafts#active"
   );
+});
+
+test("blocks a high-risk plan before starting the browser environment", async () => {
+  const blockedTask = {
+    ...task,
+    id: "creator.policy-blocked",
+    startUrl: "http://127.0.0.1:59999/sandbox/",
+    riskPolicy: {
+      thresholds: { autoApproveBelow: 40, blockAbove: 70 },
+      signals: [
+        { id: "irreversible", label: "Irreversible action", weight: 45, active: true },
+        { id: "low-roi", label: "ROI below threshold", weight: 30, active: true },
+      ],
+    },
+  };
+  const blockedPlan = { taskId: blockedTask.id, actions: [] };
+
+  const result = await runTask({ task: blockedTask, plan: blockedPlan });
+
+  assert.equal(result.serverStarted, false);
+  assert.equal(result.run.stepCount, 0);
+  assert.equal(result.run.policyAssessment.score, 75);
+  assert.equal(result.report.failures.some((failure) => failure.code === "RISK_POLICY_BLOCKED"), true);
 });
 
 test("CLI returns exit code 2 for invalid arguments", () => {

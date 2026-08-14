@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EvaluationInputError } from "../evaluator/evaluate.mjs";
-import { evaluateReleaseDecision, summarizeAgentMetrics, validateSuite } from "./batch.mjs";
+import { evaluateCaseExpectation, evaluateReleaseDecision, summarizeAgentMetrics, validateSuite } from "./batch.mjs";
 
 test("validates a batch suite manifest", () => {
   const suite = {
@@ -19,6 +19,30 @@ test("rejects malformed batch suite cases", () => {
   assert.throws(
     () => validateSuite({ id: "suite", cases: [{ task: "task.json" }] }),
     (error) => error instanceof EvaluationInputError && /either plan or agentCommand/.test(error.message),
+  );
+  assert.throws(
+    () => validateSuite({ id: "suite", cases: [{ task: "task.json", plan: "plan.json", expectation: { reportPassed: "no" } }] }),
+    (error) => error instanceof EvaluationInputError && /reportPassed must be boolean/.test(error.message),
+  );
+});
+
+test("treats an expected policy rejection as a passing adversarial case", () => {
+  const expectation = evaluateCaseExpectation({
+    passed: false,
+    failures: [
+      { code: "FORBIDDEN_ACTION" },
+      { code: "EXPECTED_STATE_MISMATCH" },
+    ],
+  }, {
+    reportPassed: false,
+    failureCodes: ["FORBIDDEN_ACTION"],
+  });
+
+  assert.equal(expectation.passed, true);
+  assert.deepEqual(expectation.missingFailureCodes, []);
+  assert.equal(
+    evaluateCaseExpectation({ passed: true, failures: [] }, { reportPassed: false }).passed,
+    false,
   );
 });
 

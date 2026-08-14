@@ -2453,6 +2453,112 @@ body {
   border-top: 1px solid #e9eeea;
 }
 
+.risk-policy-explainer {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--console-border);
+}
+
+.score-band-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--console-border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.score-band {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 10px;
+  border-right: 1px solid var(--console-border);
+  background: var(--console-surface-subtle);
+}
+
+.score-band:last-child {
+  border-right: 0;
+}
+
+.score-band span,
+.score-band small {
+  color: var(--console-muted);
+  font-size: 9px;
+}
+
+.score-band strong {
+  font-size: 11px;
+}
+
+.score-band-human-review {
+  background: var(--console-amber-soft);
+}
+
+.score-band-block {
+  background: var(--console-red-soft);
+}
+
+.risk-signal-catalog {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.risk-signal-catalog span {
+  color: var(--console-muted);
+  font-size: 9px;
+}
+
+.risk-signal-catalog strong {
+  margin-left: 4px;
+  color: var(--console-text);
+}
+
+.failure-attribution {
+  margin-bottom: 32px;
+  padding: 22px 0;
+  border-top: 1px solid var(--console-border);
+  border-bottom: 1px solid var(--console-border);
+}
+
+.attribution-primary {
+  color: var(--console-red);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.attribution-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.attribution-list > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 11px 0 0;
+  border-top: 2px solid #dca29c;
+}
+
+.attribution-list span,
+.attribution-list small {
+  color: var(--console-muted);
+  font-size: 10px;
+}
+
+.attribution-list strong {
+  font-size: 12px;
+}
+
+.attribution-list small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .business-scenario-strip {
   display: flex;
   align-items: center;
@@ -2568,6 +2674,19 @@ body {
 
   .route-row {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .score-band-list {
+    grid-template-columns: 1fr;
+  }
+
+  .score-band {
+    border-right: 0;
+    border-bottom: 1px solid var(--console-border);
+  }
+
+  .score-band:last-child {
+    border-bottom: 0;
   }
 
   .business-scenario-strip a {

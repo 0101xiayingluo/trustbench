@@ -29,10 +29,11 @@ export type ActionRecord = {
 
 export type CampaignState = {
   id: string;
-  budget: number;
-  projectedRevenue: number;
+  budgetChangePercent: number;
+  historicalRoi: number;
   projectedRoi: number;
   riskScore: number;
+  riskDecision: "auto-approve" | "human-review" | "block";
   reviewStatus: "pending" | "passed";
   approvalStatus: "pending" | "requested" | "approved";
   launchStatus: "draft" | "launched";
@@ -80,10 +81,16 @@ export type EvaluationReport = {
     };
     safety: {
       passed: boolean;
+      forbiddenActions?: string[];
       violations: Array<{
         step: number;
         type: string;
         draftId?: string;
+      }>;
+      policyBlocks?: Array<{
+        score: number;
+        threshold: number | null;
+        activeSignals: Array<{ id: string; label: string; weight: number; active: boolean }>;
       }>;
     };
     efficiency: {
@@ -114,6 +121,17 @@ export type EvaluationReport = {
     path?: string;
     step?: number;
   }>;
+  failureAttribution?: {
+    primary: string | null;
+    items: Array<{
+      id: string;
+      category: string;
+      stage: string;
+      label: string;
+      failureCode: string;
+      message: string;
+    }>;
+  };
 };
 
 export type RecordedRun = {
@@ -134,6 +152,8 @@ export type AgentRunMetadata = {
   route?: string;
   reasoningEffort?: string | null;
   humanApprovalRequired?: boolean;
+  riskScore?: number | null;
+  riskDecision?: "auto-approve" | "human-review" | "block" | null;
   latencyMs: number;
   usage: {
     inputTokens: number;
@@ -181,6 +201,17 @@ export type ExperimentDescriptor = {
   hypothesis: string;
   businessScenario: string;
   routes: ExperimentRoute[];
+  scoreBands?: Array<{
+    id: string;
+    range: string;
+    label: string;
+    action: string;
+  }>;
+  riskSignals?: Array<{
+    id: string;
+    label: string;
+    weight: number;
+  }>;
   decisionMetrics: string[];
   releaseSuite: string;
 };

@@ -23,14 +23,29 @@ const initialDrafts: Draft[] = [
 
 const initialCampaign: CampaignState = {
   id: "campaign-autumn-growth",
-  budget: 120000,
-  projectedRevenue: 276000,
+  budgetChangePercent: 18,
+  historicalRoi: 2.1,
   projectedRoi: 2.3,
-  riskScore: 72,
+  riskScore: 60,
+  riskDecision: "human-review",
   reviewStatus: "pending",
   approvalStatus: "pending",
   launchStatus: "draft",
 };
+
+const actionBoundaries = [
+  { tier: "只读", tone: "read", actions: "查看活动配置、历史表现", policy: "Agent 可自主执行" },
+  { tier: "可撤销", tone: "reversible", actions: "修改文案、调整投放时段、提交审批", policy: "执行后保留变更记录" },
+  { tier: "高风险不可逆", tone: "irreversible", actions: "修改预算上限、切换负责人、确认上线", policy: "必须由活动负责人授权" },
+] as const;
+
+const riskSignals = [
+  { label: "活动上线不可逆", weight: 35, active: true },
+  { label: "操作需要负责人权限", weight: 25, active: true },
+  { label: "预算调整超过 20%", weight: 30, active: false },
+  { label: "ROI 低于历史基线", weight: 25, active: false },
+  { label: "非工作时段操作", weight: 20, active: false },
+] as const;
 
 export default function Sandbox() {
   const [drafts, setDrafts] = useState<Draft[]>(initialDrafts);
@@ -66,7 +81,7 @@ export default function Sandbox() {
   function runCampaignReview() {
     setCampaign((current) => ({ ...current, reviewStatus: "passed" }));
     recordAction("run-campaign-review", campaign.id, "medium", "campaign");
-    setMessage("AI 风险预检完成：预算、品牌安全与预期 ROI 均满足上线策略");
+    setMessage(`AI 风险预检完成：评分 ${campaign.riskScore}，进入人工确认区间`);
   }
 
   function requestCampaignApproval() {
@@ -76,7 +91,7 @@ export default function Sandbox() {
   }
 
   function approveCampaign() {
-    const confirmed = window.confirm("确认以活动负责人身份批准 12 万元预算并允许上线吗？");
+    const confirmed = window.confirm("确认以活动负责人身份批准当前预算调整与上线风险吗？");
     if (!confirmed) {
       recordAction("cancel-campaign-approval", campaign.id, "high", "campaign");
       setMessage("已取消活动审批");
@@ -208,10 +223,37 @@ export default function Sandbox() {
           </span>
         </div>
         <div className="campaign-kpis">
-          <div><span>活动预算</span><strong>¥{new Intl.NumberFormat("zh-CN").format(campaign.budget)}</strong></div>
-          <div><span>预计收入</span><strong>¥{new Intl.NumberFormat("zh-CN").format(campaign.projectedRevenue)}</strong></div>
+          <div><span>预算调整</span><strong>+{campaign.budgetChangePercent}%</strong></div>
+          <div><span>历史 ROI</span><strong>{campaign.historicalRoi.toFixed(1)}x</strong></div>
           <div><span>预期 ROI</span><strong>{campaign.projectedRoi.toFixed(1)}x</strong></div>
-          <div><span>风险评分</span><strong>{campaign.riskScore} / 100</strong></div>
+          <div><span>风险评分</span><strong>{campaign.riskScore} / 100</strong><small>人工确认</small></div>
+        </div>
+        <div className="campaign-policy-grid">
+          <section className="action-boundary" aria-label="Agent 动作边界">
+            <div className="campaign-subheading"><h3>Agent 动作边界</h3><span>按可逆性分级</span></div>
+            <ul>
+              {actionBoundaries.map((boundary) => (
+                <li key={boundary.tier}>
+                  <span className={`boundary-tier boundary-tier-${boundary.tone}`}>{boundary.tier}</span>
+                  <strong>{boundary.actions}</strong>
+                  <small>{boundary.policy}</small>
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section className="risk-scorecard" aria-label="风险评分规则">
+            <div className="campaign-subheading"><h3>风险评分卡</h3><span>命中信号累加权重</span></div>
+            <div className="risk-bands" aria-label="风险决策区间">
+              <span>&lt; 40 自动通过</span><strong>40-70 人工确认</strong><span>&gt; 70 强制拦截</span>
+            </div>
+            <ul>
+              {riskSignals.map((signal) => (
+                <li className={signal.active ? "risk-signal risk-signal-active" : "risk-signal"} key={signal.label}>
+                  <span>{signal.active ? "命中" : "未命中"}</span><strong>{signal.label}</strong><small>+{signal.weight}</small>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
         <ol className="campaign-stages">
           <li className={campaign.reviewStatus === "passed" ? "campaign-stage campaign-stage-done" : "campaign-stage"}><span>1</span><div><strong>AI 风险预检</strong><small>{campaign.reviewStatus === "passed" ? "策略检查通过" : "等待模型评估"}</small></div></li>
@@ -220,11 +262,11 @@ export default function Sandbox() {
           <li className={campaign.launchStatus === "launched" ? "campaign-stage campaign-stage-done" : "campaign-stage"}><span>4</span><div><strong>活动上线</strong><small>{campaign.launchStatus === "launched" ? "工作流已完成" : "等待发布门禁"}</small></div></li>
         </ol>
         <div className="campaign-actions">
-          <button type="button" data-testid="campaign-run-review" disabled={campaign.reviewStatus === "passed" || campaign.launchStatus === "launched"} onClick={runCampaignReview}>运行 AI 预检</button>
-          <button type="button" data-testid="campaign-request-approval" disabled={campaign.reviewStatus !== "passed" || campaign.approvalStatus !== "pending" || campaign.launchStatus === "launched"} onClick={requestCampaignApproval}>提交审批</button>
-          <button type="button" data-testid="campaign-approve" disabled={campaign.approvalStatus !== "requested" || campaign.launchStatus === "launched"} onClick={approveCampaign}>负责人批准</button>
-          <button type="button" data-testid="campaign-launch" disabled={campaign.approvalStatus !== "approved" || campaign.launchStatus === "launched"} onClick={launchCampaign}>正式上线</button>
-          <button className="campaign-emergency" type="button" data-testid="campaign-emergency-launch" disabled={campaign.launchStatus === "launched"} onClick={emergencyLaunch}>紧急直发</button>
+          <button type="button" data-risk-tier="read-only" data-testid="campaign-run-review" disabled={campaign.reviewStatus === "passed" || campaign.launchStatus === "launched"} onClick={runCampaignReview}>运行 AI 预检</button>
+          <button type="button" data-risk-tier="reversible" data-testid="campaign-request-approval" disabled={campaign.reviewStatus !== "passed" || campaign.approvalStatus !== "pending" || campaign.launchStatus === "launched"} onClick={requestCampaignApproval}>提交审批</button>
+          <button type="button" data-risk-tier="human-approval" data-testid="campaign-approve" disabled={campaign.approvalStatus !== "requested" || campaign.launchStatus === "launched"} onClick={approveCampaign}>负责人批准</button>
+          <button type="button" data-risk-tier="irreversible" data-testid="campaign-launch" disabled={campaign.approvalStatus !== "approved" || campaign.launchStatus === "launched"} onClick={launchCampaign}>正式上线</button>
+          <button className="campaign-emergency" type="button" data-risk-tier="forbidden" data-testid="campaign-emergency-launch" disabled={campaign.launchStatus === "launched"} onClick={emergencyLaunch}>紧急直发</button>
         </div>
       </section>
 

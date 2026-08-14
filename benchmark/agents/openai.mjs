@@ -1,3 +1,5 @@
+import { evaluateRiskPolicy } from "../policy/risk.mjs";
+
 const DEFAULT_MODEL = "gpt-4.1-mini";
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_TIMEOUT_MS = 30000;
@@ -170,6 +172,7 @@ export function buildAgentInput(task) {
     forbiddenActions: task.forbiddenActions,
     maxSteps: task.maxSteps,
     riskLevel: task.riskLevel ?? null,
+    riskPolicy: task.riskPolicy ?? null,
     businessRules: task.businessRules ?? [],
     requiredApprovals: task.requiredApprovals ?? [],
     agentContext: task.agentContext ?? {},
@@ -181,12 +184,26 @@ export function selectAgentProfile(task, env = process.env, modelOverride) {
   const reasoningModel = typeof env.OPENAI_REASONING_MODEL === "string"
     ? env.OPENAI_REASONING_MODEL.trim()
     : "";
-  const highRisk = task?.riskLevel === "high";
+  const riskAssessment = task?.riskPolicy ? evaluateRiskPolicy(task.riskPolicy) : null;
+  const highRisk = riskAssessment
+    ? riskAssessment.decision === "human-review"
+    : task?.riskLevel === "high";
   const configuredEffort = typeof env.OPENAI_REASONING_EFFORT === "string"
     ? env.OPENAI_REASONING_EFFORT.trim()
     : "";
   if (configuredEffort && !reasoningEfforts.has(configuredEffort)) {
     throw new Error(`Unsupported OPENAI_REASONING_EFFORT: ${configuredEffort}.`);
+  }
+  if (riskAssessment?.decision === "block") {
+    return {
+      model: reasoningModel || baseModel,
+      route: "policy-blocked",
+      reasoningEffort: null,
+      promptVersion: "trustbench-risk-policy-v3",
+      humanApprovalRequired: false,
+      riskScore: riskAssessment.score,
+      riskDecision: riskAssessment.decision,
+    };
   }
   if (highRisk && reasoningModel) {
     return {
@@ -194,7 +211,9 @@ export function selectAgentProfile(task, env = process.env, modelOverride) {
       route: "high-risk-reasoning",
       reasoningEffort: configuredEffort || "high",
       promptVersion: "trustbench-risk-governed-v2",
-      humanApprovalRequired: Array.isArray(task.requiredApprovals) && task.requiredApprovals.length > 0,
+      humanApprovalRequired: riskAssessment?.decision === "human-review" || (Array.isArray(task.requiredApprovals) && task.requiredApprovals.length > 0),
+      riskScore: riskAssessment?.score ?? null,
+      riskDecision: riskAssessment?.decision ?? null,
     };
   }
   return {
@@ -202,7 +221,9 @@ export function selectAgentProfile(task, env = process.env, modelOverride) {
     route: highRisk ? "high-risk-governed" : "balanced",
     reasoningEffort: null,
     promptVersion: highRisk ? "trustbench-risk-governed-v2" : "trustbench-balanced-v2",
-    humanApprovalRequired: Array.isArray(task?.requiredApprovals) && task.requiredApprovals.length > 0,
+    humanApprovalRequired: riskAssessment?.decision === "human-review" || (Array.isArray(task?.requiredApprovals) && task.requiredApprovals.length > 0),
+    riskScore: riskAssessment?.score ?? null,
+    riskDecision: riskAssessment?.decision ?? null,
   };
 }
 
@@ -253,6 +274,9 @@ export async function createOpenAIPlan({
   }
   if (typeof fetchImpl !== "function") throw new Error("A Fetch API implementation is required.");
   const profile = selectAgentProfile(task, env, model);
+  if (profile.riskDecision === "block") {
+    throw new Error(`Risk policy blocked task ${task.id} at score ${profile.riskScore}.`);
+  }
 
   const started = now();
   let apiResponse;
@@ -317,6 +341,8 @@ export async function createOpenAIPlan({
       route: profile.route,
       reasoningEffort: profile.reasoningEffort,
       humanApprovalRequired: profile.humanApprovalRequired,
+      riskScore: profile.riskScore,
+      riskDecision: profile.riskDecision,
       latencyMs,
       usage,
       cost: estimateCost(usage, pricing),

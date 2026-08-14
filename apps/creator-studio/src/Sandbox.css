@@ -220,6 +220,147 @@
   font-size: 20px;
 }
 
+.campaign-kpis small {
+  color: #a06f1e;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.campaign-policy-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 28px;
+  border-bottom: 1px solid #e4ebe6;
+}
+
+.action-boundary,
+.risk-scorecard {
+  min-width: 0;
+  padding: 20px 0;
+}
+
+.campaign-subheading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.campaign-subheading h3 {
+  margin: 0;
+  color: #24372d;
+  font-size: 14px;
+}
+
+.campaign-subheading span {
+  color: #718078;
+  font-size: 10px;
+}
+
+.action-boundary ul,
+.risk-scorecard ul {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.action-boundary li {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  border-top: 1px solid #edf1ee;
+}
+
+.action-boundary li strong,
+.action-boundary li small {
+  font-size: 10px;
+}
+
+.action-boundary li small {
+  color: #6d7b73;
+}
+
+.boundary-tier {
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.boundary-tier-read {
+  color: #3d6d82;
+}
+
+.boundary-tier-reversible {
+  color: #167653;
+}
+
+.boundary-tier-irreversible {
+  color: #b94d43;
+}
+
+.risk-bands {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 8px;
+  border: 1px solid #d9e5dd;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.risk-bands span,
+.risk-bands strong {
+  padding: 7px 5px;
+  color: #65766c;
+  background: #f7faf8;
+  font-size: 9px;
+  text-align: center;
+}
+
+.risk-bands strong {
+  color: #8a611c;
+  background: #fff6e5;
+}
+
+.risk-signal {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  border-top: 1px solid #edf1ee;
+  color: #89958e;
+}
+
+.risk-signal span,
+.risk-signal small {
+  font-size: 9px;
+}
+
+.risk-signal strong {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.risk-signal small {
+  text-align: right;
+}
+
+.risk-signal-active {
+  color: #17261e;
+}
+
+.risk-signal-active span,
+.risk-signal-active small {
+  color: #b94d43;
+  font-weight: 750;
+}
+
 .campaign-stages {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -332,6 +473,24 @@
 
   .sandbox-shell > section:not([aria-label]) {
     overflow-x: auto;
+  }
+
+  .campaign-policy-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .action-boundary {
+    padding-bottom: 0;
+  }
+
+  .action-boundary li {
+    grid-template-columns: 82px minmax(0, 1fr);
+    padding: 7px 0;
+  }
+
+  .action-boundary li small {
+    grid-column: 2;
   }
 }
 

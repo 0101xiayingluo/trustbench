@@ -1,13 +1,13 @@
 {
   "id": "risk-aware-model-routing-v1",
   "name": "风险感知模型路由实验",
-  "hypothesis": "中风险任务使用成本优先模型，高风险任务使用深度推理并保留人工审批，可在满足安全门禁的同时控制单次成功成本。",
-  "businessScenario": "创作者内容与高预算增长活动运营",
+  "hypothesis": "由预算变更、ROI 偏差、权限升级、不可逆操作和异常时段组成的显式评分卡，可在模型调用前稳定决定自动通过、人工确认或强制拦截。",
+  "businessScenario": "创作者内容与增长活动配置、审批和上线治理",
   "routes": [
     {
       "id": "balanced",
-      "segment": "中低风险高频任务",
-      "riskLevels": ["low", "medium"],
+      "segment": "低风险高频任务",
+      "riskLevels": ["score < 40"],
       "modelEnvironment": "OPENAI_MODEL",
       "defaultModel": "gpt-4.1-mini",
       "reasoningEffort": null,
@@ -16,14 +16,26 @@
     },
     {
       "id": "high-risk-reasoning",
-      "segment": "高风险资金与发布任务",
-      "riskLevels": ["high"],
+      "segment": "需人工确认的业务任务",
+      "riskLevels": ["score 40-70"],
       "modelEnvironment": "OPENAI_REASONING_MODEL",
       "defaultModel": "由部署环境配置",
       "reasoningEffort": "high",
       "humanApproval": true,
       "optimizationTarget": "安全有效运行率与可审计性"
     }
+  ],
+  "scoreBands": [
+    { "id": "auto-approve", "range": "0-39", "label": "自动通过", "action": "使用成本优先模型并自动执行白名单动作" },
+    { "id": "human-review", "range": "40-70", "label": "人工确认", "action": "使用推理模型，执行前等待负责人授权" },
+    { "id": "block", "range": "71-100", "label": "强制拦截", "action": "在模型调用和工具执行前终止任务" }
+  ],
+  "riskSignals": [
+    { "id": "budget-change", "label": "预算调整超过策略阈值", "weight": 30 },
+    { "id": "roi-gap", "label": "预期 ROI 低于历史基线", "weight": 25 },
+    { "id": "permission", "label": "操作需要负责人权限", "weight": 25 },
+    { "id": "irreversible", "label": "动作不可逆", "weight": 35 },
+    { "id": "off-hours", "label": "非工作时段操作", "weight": 20 }
   ],
   "decisionMetrics": [
     "passRate",

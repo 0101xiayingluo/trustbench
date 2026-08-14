@@ -176,6 +176,27 @@ function formatCost(value: number | null | undefined) {
   return `$${value < 0.01 ? value.toFixed(6) : value.toFixed(4)}`;
 }
 
+function formatAttributionCategory(value: string | null) {
+  const labels: Record<string, string> = {
+    planning: "规划",
+    "state-drift": "状态漂移",
+    safety: "安全策略",
+    "business-rule": "业务规则",
+    execution: "执行异常",
+  };
+  return value ? labels[value] ?? value : "无";
+}
+
+function formatAttributionStage(value: string) {
+  const labels: Record<string, string> = {
+    planning: "规划阶段",
+    execution: "执行阶段",
+    policy: "策略阶段",
+    decision: "决策阶段",
+  };
+  return labels[value] ?? value;
+}
+
 function formatGateValue(value: boolean | number | null, unit: string) {
   if (value === null) return "数据缺失";
   if (unit === "boolean") return value ? "是" : "否";
@@ -343,6 +364,12 @@ function Dashboard() {
     () => report.dimensions.outcome.checks.filter((check) => !check.passed),
     [report]
   );
+  const policyBlocks = report.dimensions.safety.policyBlocks ?? [];
+  const failedAssertionCount = failedChecks.length
+    + report.dimensions.safety.violations.length
+    + policyBlocks.length
+    + (report.dimensions.efficiency.passed ? 0 : 1)
+    + (report.dimensions.business?.checks.filter((check) => !check.passed).length ?? 0);
   const visibleRunRecords = useMemo(
     () => runRecords.filter((record) => runFilter === "all" || record.report.passed === (runFilter === "passed")),
     [runFilter, runRecords]
@@ -518,13 +545,27 @@ function Dashboard() {
                     );
                   })}
                 </div>
+                <div className="risk-policy-explainer">
+                  <div className="score-band-list" aria-label="风险分数决策区间">
+                    {(activeExperiment?.scoreBands ?? []).map((band) => (
+                      <div className={`score-band score-band-${band.id}`} key={band.id}>
+                        <span>{band.range}</span><strong>{band.label}</strong><small>{band.action}</small>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="risk-signal-catalog" aria-label="风险信号权重">
+                    {(activeExperiment?.riskSignals ?? []).map((signal) => (
+                      <span key={signal.id}>{signal.label}<strong>+{signal.weight}</strong></span>
+                    ))}
+                  </div>
+                </div>
               </section>
             </div>
 
             <div className="business-scenario-strip">
               <span>复杂业务样例</span>
-              <strong>¥120,000 秋季增长活动</strong>
-              <span>AI 风险预检</span><span>人工审批</span><span>ROI ≥ 2.0</span><span>禁止绕过上线</span>
+              <strong>增长活动配置与上线</strong>
+              <span>三级动作边界</span><span>显式风险评分</span><span>人工审批</span><span>攻击路径验证</span>
               <a href="/sandbox/">查看业务工作流</a>
             </div>
           </section>
@@ -671,9 +712,9 @@ function Dashboard() {
               <div className="metric-item">
                 <span className="metric-label">安全检查</span>
                 <strong className={report.dimensions.safety.passed ? "metric-value metric-pass" : "metric-value metric-fail"}>
-                  {report.dimensions.safety.violations.length} 违规
+                  {policyBlocks.length > 0 ? `${policyBlocks.length} 拦截` : `${report.dimensions.safety.violations.length} 违规`}
                 </strong>
-                <span className="metric-note">{report.dimensions.safety.passed ? "未触发禁止动作" : "命中禁止动作"}</span>
+                <span className="metric-note">{policyBlocks.length > 0 ? "浏览器执行前已阻断" : report.dimensions.safety.passed ? "未触发禁止动作" : "命中禁止动作"}</span>
               </div>
               <div className="metric-item">
                 <span className="metric-label">执行步数</span>
@@ -688,6 +729,22 @@ function Dashboard() {
                 </div>
               )}
             </div>
+
+            {report.failureAttribution && report.failureAttribution.items.length > 0 && (
+              <section className="failure-attribution" aria-label="失败归因">
+                <div className="section-heading-row">
+                  <div><h2>失败归因</h2><p className="section-caption">根据结构化失败证据定位规划、执行、安全或业务规则问题。</p></div>
+                  <span className="attribution-primary">主因 {formatAttributionCategory(report.failureAttribution.primary)}</span>
+                </div>
+                <div className="attribution-list">
+                  {report.failureAttribution.items.map((item) => (
+                    <div key={item.id}>
+                      <span>{formatAttributionStage(item.stage)}</span><strong>{item.label}</strong><small>{item.failureCode} · {item.message}</small>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <div className="section-heading-row agent-metrics-heading">
               <div>
@@ -730,7 +787,7 @@ function Dashboard() {
 
             <div className="section-heading-row">
               <h2>断言明细</h2>
-              <span className="section-caption">{failedChecks.length ? `${failedChecks.length} 项未通过` : "全部通过"}</span>
+              <span className="section-caption">{failedAssertionCount ? `${failedAssertionCount} 项未通过` : "全部通过"}</span>
             </div>
             <div className="table-scroll">
               <table className="results-table">
@@ -747,9 +804,9 @@ function Dashboard() {
                     </tr>
                   ))}
                   <tr>
-                    <td className="code-text">forbiddenActions</td>
-                    <td>无 delete-draft</td>
-                    <td>{report.dimensions.safety.violations.length} 次</td>
+                    <td className="code-text">{policyBlocks.length > 0 ? "riskPolicy" : "forbiddenActions"}</td>
+                    <td>{policyBlocks.length > 0 ? `风险分 ≤ ${policyBlocks[0].threshold}` : report.dimensions.safety.forbiddenActions?.length ? `无 ${report.dimensions.safety.forbiddenActions.join("、")}` : "无禁止动作"}</td>
+                    <td>{policyBlocks.length > 0 ? `风险分 ${policyBlocks[0].score}，前置拦截` : `${report.dimensions.safety.violations.length} 次`}</td>
                     <td><StatusMark passed={report.dimensions.safety.passed} />{report.dimensions.safety.passed ? "通过" : "失败"}</td>
                   </tr>
                   {report.dimensions.business?.checks.map((check) => (

@@ -34,6 +34,20 @@ export function validateSuite(suite) {
     if (entry.id !== undefined && (typeof entry.id !== "string" || entry.id.length === 0)) {
       throw new EvaluationInputError(`Suite case at index ${index} id must be a non-empty string.`);
     }
+    if (entry.expectation !== undefined) {
+      if (!isRecord(entry.expectation)) {
+        throw new EvaluationInputError(`Suite case at index ${index} expectation must be an object.`);
+      }
+      if (entry.expectation.reportPassed !== undefined && typeof entry.expectation.reportPassed !== "boolean") {
+        throw new EvaluationInputError(`Suite case at index ${index} expectation reportPassed must be boolean.`);
+      }
+      if (entry.expectation.failureCodes !== undefined && (
+        !Array.isArray(entry.expectation.failureCodes)
+        || !entry.expectation.failureCodes.every((code) => typeof code === "string" && code.length > 0)
+      )) {
+        throw new EvaluationInputError(`Suite case at index ${index} expectation failureCodes must be an array of non-empty strings.`);
+      }
+    }
   });
   if (suite.releasePolicy !== undefined) {
     if (!isRecord(suite.releasePolicy)) {
@@ -95,6 +109,21 @@ export function summarizeAgentMetrics(cases) {
       ? Number(sum(costs).toFixed(8))
       : null,
     pricedCalls: costs.length,
+  };
+}
+
+export function evaluateCaseExpectation(report, expectation) {
+  const expectedReportPassed = expectation?.reportPassed ?? true;
+  const expectedFailureCodes = expectation?.failureCodes ?? [];
+  const observedFailureCodes = report.failures.map((failure) => failure.code);
+  const missingFailureCodes = expectedFailureCodes.filter((code) => !observedFailureCodes.includes(code));
+  return {
+    passed: report.passed === expectedReportPassed && missingFailureCodes.length === 0,
+    expectedReportPassed,
+    observedReportPassed: report.passed,
+    expectedFailureCodes,
+    observedFailureCodes,
+    missingFailureCodes,
   };
 }
 
@@ -183,6 +212,7 @@ export async function runSuite({
         ? await generatePlan({ task, command: entry.agentCommand })
         : await readJson(resolve(root, entry.plan), "plan");
       const result = await runTask({ ...runnerOptions, task, plan });
+      const expectation = evaluateCaseExpectation(result.report, entry.expectation);
       const artifacts = await writeRunArtifacts(
         result,
         resolve(runsDir, safeTaskDirectory(task.id), createRunId()),
@@ -191,8 +221,10 @@ export async function runSuite({
       cases.push({
         id: caseId,
         taskId: task.id,
-        passed: result.report.passed,
-        score: result.report.score,
+        passed: expectation.passed,
+        score: expectation.passed ? 1 : 0,
+        observedReportPassed: result.report.passed,
+        expectation,
         stepCount: result.report.stepCount,
         safetyViolations: result.report.dimensions.safety.violations.length,
         businessScore: result.report.dimensions.business.score,
@@ -200,7 +232,7 @@ export async function runSuite({
         ...(result.run.agent ? { agent: result.run.agent } : {}),
         artifacts,
       });
-      if (!result.report.passed && !continueOnError) {
+      if (!expectation.passed && !continueOnError) {
         break;
       }
     } catch (error) {

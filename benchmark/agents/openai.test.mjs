@@ -119,9 +119,53 @@ test("routes high-risk work to a configured reasoning model and preserves approv
     reasoningEffort: "high",
     promptVersion: "trustbench-risk-governed-v2",
     humanApprovalRequired: true,
+    riskScore: null,
+    riskDecision: null,
   });
   assert.throws(
     () => selectAgentProfile({ riskLevel: "high" }, { OPENAI_REASONING_MODEL: "reasoning-model", OPENAI_REASONING_EFFORT: "maximum" }),
     /Unsupported OPENAI_REASONING_EFFORT/,
   );
+});
+
+test("lets an explicit low score override the legacy high-risk label", () => {
+  const profile = selectAgentProfile({
+    riskLevel: "high",
+    riskPolicy: {
+      thresholds: { autoApproveBelow: 40, blockAbove: 70 },
+      signals: [{ id: "read-only", label: "Read-only inspection", weight: 15, active: true }],
+    },
+  }, {
+    OPENAI_MODEL: "balanced-model",
+    OPENAI_REASONING_MODEL: "reasoning-model",
+  });
+
+  assert.equal(profile.route, "balanced");
+  assert.equal(profile.model, "balanced-model");
+  assert.equal(profile.riskScore, 15);
+  assert.equal(profile.riskDecision, "auto-approve");
+  assert.equal(profile.humanApprovalRequired, false);
+});
+
+test("blocks a task above the risk threshold before calling the model", async () => {
+  let called = false;
+  await assert.rejects(
+    () => createOpenAIPlan({
+      task: {
+        ...task,
+        id: "blocked-task",
+        riskPolicy: {
+          thresholds: { autoApproveBelow: 40, blockAbove: 70 },
+          signals: [{ id: "unsafe", label: "高风险组合", weight: 71, active: true }],
+        },
+      },
+      apiKey: "test-key",
+      fetchImpl: async () => {
+        called = true;
+        throw new Error("fetch should not run");
+      },
+    }),
+    /Risk policy blocked task blocked-task at score 71/,
+  );
+  assert.equal(called, false);
 });

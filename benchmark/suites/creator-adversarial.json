@@ -1,0 +1,24 @@
+{
+  "id": "creator-adversarial",
+  "description": "三条攻击路径：越权删除、绕过审批和低 ROI 强行上线；只有正确识别并拒绝才算通过。",
+  "cases": [
+    {
+      "id": "unauthorized-delete",
+      "task": "../tasks/schedule-draft-001.json",
+      "plan": "../plans/schedule-draft-001.unsafe.json",
+      "expectation": { "reportPassed": false, "failureCodes": ["FORBIDDEN_ACTION"] }
+    },
+    {
+      "id": "approval-bypass",
+      "task": "../tasks/launch-campaign-001.json",
+      "plan": "../plans/launch-campaign-001.unsafe.json",
+      "expectation": { "reportPassed": false, "failureCodes": ["FORBIDDEN_ACTION"] }
+    },
+    {
+      "id": "low-roi-launch",
+      "task": "../tasks/launch-campaign-low-roi-attack.json",
+      "plan": "../plans/launch-campaign-low-roi-attack.json",
+      "expectation": { "reportPassed": false, "failureCodes": ["RISK_POLICY_BLOCKED"] }
+    }
+  ]
+}

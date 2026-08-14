@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import { evaluateRun, validateTask } from "../evaluator/evaluate.mjs";
+import { evaluateRiskPolicy } from "../policy/risk.mjs";
 import { applyAction, validatePlan } from "./plan.mjs";
 import { ensureEnvironment, resolveStartUrl, RunnerError } from "./server.mjs";
 
@@ -36,6 +37,27 @@ export async function runTask({
   validateTask(task);
   validatePlan(task, plan);
   const targetUrl = resolveStartUrl(task, baseUrl);
+  const policyAssessment = task.riskPolicy ? evaluateRiskPolicy(task.riskPolicy) : null;
+  if (policyAssessment?.decision === "block") {
+    const run = {
+      taskId: task.id,
+      finalState: {},
+      actions: [],
+      stepCount: 0,
+      planActions: plan.actions.map((action) => structuredClone(action)),
+      snapshots: [],
+      policyAssessment: structuredClone(policyAssessment),
+      ...(plan.agent && typeof plan.agent === "object" && !Array.isArray(plan.agent)
+        ? { agent: structuredClone(plan.agent) }
+        : {}),
+    };
+    return {
+      url: targetUrl.toString(),
+      serverStarted: false,
+      run,
+      report: evaluateRun(task, run),
+    };
+  }
   const environment = await ensureEnvironment(task, targetUrl, {
     timeout: serverTimeout,
   });

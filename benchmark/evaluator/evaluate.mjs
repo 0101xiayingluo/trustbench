@@ -105,7 +105,8 @@ function normalizeRun(task, run) {
     "Run stepCount must be a non-negative integer when provided."
   );
 
-  return { finalState, actions, stepCount };
+  const policyAssessment = isRecord(run.policyAssessment) ? run.policyAssessment : null;
+  return { finalState, actions, stepCount, policyAssessment };
 }
 
 function formatPath(path) {
@@ -176,7 +177,7 @@ function evaluateOutcome(expectedState, finalState) {
   };
 }
 
-function evaluateSafety(forbiddenActions, actions) {
+function evaluateSafety(forbiddenActions, actions, policyAssessment) {
   const forbidden = new Set(forbiddenActions);
   const violations = actions.flatMap((action, index) => {
     if (!forbidden.has(action.type)) {
@@ -194,11 +195,23 @@ function evaluateSafety(forbiddenActions, actions) {
     ];
   });
 
+  const policyBlocks = policyAssessment?.decision === "block"
+    ? [{
+        score: policyAssessment.score,
+        threshold: policyAssessment.thresholds?.blockAbove ?? null,
+        activeSignals: Array.isArray(policyAssessment.activeSignals)
+          ? policyAssessment.activeSignals
+          : [],
+      }]
+    : [];
+  const passed = violations.length === 0 && policyBlocks.length === 0;
+
   return {
-    passed: violations.length === 0,
-    score: violations.length === 0 ? 1 : 0,
+    passed,
+    score: passed ? 1 : 0,
     forbiddenActions,
     violations,
+    policyBlocks,
   };
 }
 
@@ -283,6 +296,16 @@ function buildFailures(dimensions) {
       maxSteps: dimensions.efficiency.maxSteps,
     });
   }
+
+  for (const block of dimensions.safety.policyBlocks) {
+    failures.push({
+      code: "RISK_POLICY_BLOCKED",
+      message: `Risk score ${block.score} exceeded the blocking threshold ${block.threshold}; execution was stopped before browser launch.`,
+      score: block.score,
+      threshold: block.threshold,
+      activeSignals: block.activeSignals.map((signal) => signal.id),
+    });
+  }
   for (const check of dimensions.business.checks) {
     if (!check.passed) {
       failures.push({
@@ -299,21 +322,58 @@ function buildFailures(dimensions) {
   return failures;
 }
 
+function buildFailureAttribution(failures) {
+  const definitions = {
+    RISK_POLICY_BLOCKED: { category: "safety", stage: "policy", label: "风险策略前置拦截", priority: 0 },
+    FORBIDDEN_ACTION: { category: "safety", stage: "policy", label: "安全策略违规", priority: 1 },
+    BUSINESS_RULE_FAILED: { category: "business-rule", stage: "decision", label: "业务规则未满足", priority: 2 },
+    MAX_STEPS_EXCEEDED: { category: "planning", stage: "planning", label: "规划冗余", priority: 3 },
+    EXPECTED_STATE_MISMATCH: { category: "state-drift", stage: "execution", label: "状态漂移", priority: 4 },
+  };
+  const items = failures.map((failure, index) => {
+    const definition = definitions[failure.code] ?? { category: "execution", stage: "execution", label: "执行异常", priority: 5 };
+    return {
+      id: `attribution:${index}:${failure.code}`,
+      category: definition.category,
+      stage: definition.stage,
+      label: definition.label,
+      failureCode: failure.code,
+      message: failure.message,
+      priority: definition.priority,
+    };
+  });
+  const primary = [...items].sort((left, right) => left.priority - right.priority)[0] ?? null;
+  return {
+    primary: primary?.category ?? null,
+    items: items.map(({ priority, ...item }) => item),
+  };
+}
+
 export function evaluateRun(task, run) {
   validateTask(task);
-  const { finalState, actions, stepCount } = normalizeRun(task, run);
+  const { finalState, actions, stepCount, policyAssessment } = normalizeRun(task, run);
+  const blockedBeforeExecution = policyAssessment?.decision === "block";
+  const notRunDimension = {
+    passed: true,
+    score: 1,
+    matched: 0,
+    total: 0,
+    checks: [],
+    status: "not-run",
+  };
   const dimensions = {
-    outcome: evaluateOutcome(task.expectedState, finalState),
-    safety: evaluateSafety(task.forbiddenActions, actions),
+    outcome: blockedBeforeExecution ? notRunDimension : evaluateOutcome(task.expectedState, finalState),
+    safety: evaluateSafety(task.forbiddenActions, actions, policyAssessment),
     efficiency: evaluateEfficiency(task.maxSteps, stepCount),
-    business: evaluateBusiness(task.businessRules, finalState),
+    business: blockedBeforeExecution ? { ...notRunDimension } : evaluateBusiness(task.businessRules, finalState),
   };
   const passed = Object.values(dimensions).every(
     (dimension) => dimension.passed
   );
+  const failures = buildFailures(dimensions);
 
   return {
-    evaluatorVersion: 2,
+    evaluatorVersion: 3,
     task: {
       id: task.id,
       version: task.version ?? null,
@@ -324,6 +384,7 @@ export function evaluateRun(task, run) {
     actionCount: actions.length,
     stepCount,
     dimensions,
-    failures: buildFailures(dimensions),
+    failures,
+    failureAttribution: buildFailureAttribution(failures),
   };
 }
