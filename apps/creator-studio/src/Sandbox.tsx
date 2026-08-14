@@ -153,6 +153,7 @@ export default function Sandbox() {
         <h1>创作者工作台</h1>
         <div className="sandbox-head-actions">
           <span>本地仿真环境</span>
+          <a href="/showcase/">项目作品集</a>
           <a href="/">返回控制台</a>
         </div>
       </header>

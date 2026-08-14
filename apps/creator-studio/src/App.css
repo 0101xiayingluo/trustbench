@@ -2056,6 +2056,37 @@ body {
   padding: 20px;
 }
 
+.policy-blocked-preview {
+  display: grid;
+  min-height: 260px;
+  align-content: center;
+  justify-items: center;
+  gap: 9px;
+  padding: 28px;
+  text-align: center;
+  background: var(--console-red-soft);
+}
+
+.policy-blocked-preview span {
+  color: var(--console-red);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.policy-blocked-preview strong {
+  color: var(--console-red);
+  font-size: 22px;
+}
+
+.policy-blocked-preview p {
+  max-width: 360px;
+  margin: 0;
+  color: var(--console-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
 .trace-panel {
   padding: 20px;
   background: var(--console-surface-subtle);
@@ -2617,7 +2648,7 @@ body {
   }
 
   .console-nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .decision-kpi-grid,

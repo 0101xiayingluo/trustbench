@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Portfolio from "./Portfolio";
 import Sandbox from "./Sandbox";
 import type {
   AgentProvider,
@@ -242,11 +243,13 @@ function Dashboard() {
   const compareRecord = runRecords.find((record) => record.id === compareRunId);
   const run = selectedRecord.run;
   const report = selectedRecord.report;
-  const replayStepCount = Math.max(
-    run.stepCount,
-    run.planActions?.length ?? 0,
-    (run.snapshots?.length ?? 1) - 1,
-  );
+  const policyBlocks = report.dimensions.safety.policyBlocks ?? [];
+  const isPolicyBlocked = policyBlocks.length > 0;
+  const replayStepCount = isPolicyBlocked ? 0 : Math.max(
+      run.stepCount,
+      run.planActions?.length ?? 0,
+      (run.snapshots?.length ?? 1) - 1,
+    );
   const replayActions: PlanAction[] = Array.from({ length: replayStepCount }, (_, index) =>
     run.planActions?.[index] ??
     run.snapshots?.[index + 1]?.planAction ??
@@ -260,10 +263,14 @@ function Dashboard() {
     step: currentReplayStep,
     state: run.finalState,
   };
-  const scheduledCount = Object.values(snapshot.state.draftStatuses).filter(
+  const snapshotDraftStatuses = snapshot.state.draftStatuses ?? {};
+  const snapshotDraftCount = snapshot.state.draftCount ?? Object.keys(snapshotDraftStatuses).length;
+  const initialDraftStatuses = initialState.draftStatuses ?? {};
+  const initialDraftCount = initialState.draftCount ?? Object.keys(initialDraftStatuses).length;
+  const scheduledCount = Object.values(snapshotDraftStatuses).filter(
     (status) => status === "已排期"
   ).length;
-  const replayStatus = snapshot.state.draftStatuses["draft-001"] ?? "草稿";
+  const replayStatus = snapshotDraftStatuses["draft-001"] ?? "草稿";
 
   useEffect(() => {
     let cancelled = false;
@@ -364,7 +371,6 @@ function Dashboard() {
     () => report.dimensions.outcome.checks.filter((check) => !check.passed),
     [report]
   );
-  const policyBlocks = report.dimensions.safety.policyBlocks ?? [];
   const failedAssertionCount = failedChecks.length
     + report.dimensions.safety.violations.length
     + policyBlocks.length
@@ -417,6 +423,7 @@ function Dashboard() {
             <span>◇</span>发布决策
           </button>
           <a className="nav-item" href="/sandbox/"><span>▣</span>仿真环境</a>
+          <a className="nav-item" href="/showcase/"><span>↗</span>项目作品集</a>
         </nav>
         <div className="sidebar-meta">
           本地评测节点
@@ -777,7 +784,10 @@ function Dashboard() {
 
             <h2>执行流水线</h2>
             <div className="pipeline" aria-label="执行流水线">
-              {["启动环境", "创建浏览器", "执行计划", "采集状态", "自动评测"].map((stage) => (
+              {(isPolicyBlocked
+                ? ["风险评分", "策略拦截", "模型未调用", "浏览器未启动"]
+                : ["启动环境", "创建浏览器", "执行计划", "采集状态", "自动评测"]
+              ).map((stage) => (
                 <div className="pipeline-stage" key={stage}>
                   <span className="pipeline-mark">✓</span>
                   {stage}
@@ -821,7 +831,7 @@ function Dashboard() {
               </table>
             </div>
             <div className="footer-line">
-              <span>环境 creator-default</span><span>浏览器 Edge</span><span>步数 {report.stepCount}</span>{run.agent && <span>模型 {run.agent.model}</span>}<span>报告 report.json</span>
+              <span>环境 {isPolicyBlocked ? "未启动" : "creator-default"}</span><span>浏览器 {isPolicyBlocked ? "未启动" : "Edge"}</span><span>步数 {report.stepCount}</span>{run.agent && <span>模型 {run.agent.model}</span>}<span>报告 report.json</span>
             </div>
           </section>
         )}
@@ -831,21 +841,29 @@ function Dashboard() {
             <div className="replay-layout">
               <div className="sandbox-preview">
                 <div className="preview-head"><strong>创作者工作台</strong><span>快照 {currentReplayStep} / {replayStepCount}</span></div>
-                <div className="preview-body">
-                  <div className="preview-stats"><span>内容总数<strong>{snapshot.state.draftCount}</strong></span><span>已排期<strong>{scheduledCount}</strong></span><span>待处理<strong>{snapshot.state.draftCount - scheduledCount}</strong></span></div>
-                  <table className="preview-table">
-                    <tbody>
-                      <tr><td>draft-001</td><td>{replayStatus}</td><td><button type="button" disabled={replayStatus === "已排期"}>{replayStatus === "已排期" ? "已排期" : "排期发布"}</button></td></tr>
-                      <tr><td>draft-002</td><td>{snapshot.state.draftStatuses["draft-002"] ?? "已删除"}</td><td><button type="button" disabled>{draftControlLabel(snapshot.state.draftStatuses["draft-002"])}</button></td></tr>
-                      <tr><td>draft-003</td><td>{snapshot.state.draftStatuses["draft-003"] ?? "已删除"}</td><td><button type="button" disabled>{draftControlLabel(snapshot.state.draftStatuses["draft-003"])}</button></td></tr>
-                    </tbody>
-                  </table>
-                </div>
+                {isPolicyBlocked ? (
+                  <div className="policy-blocked-preview">
+                    <span>RISK_POLICY_BLOCKED</span>
+                    <strong>执行前已阻断</strong>
+                    <p>风险分 {policyBlocks[0].score} 超过阈值 {policyBlocks[0].threshold}，未创建浏览器状态快照。</p>
+                  </div>
+                ) : (
+                  <div className="preview-body">
+                    <div className="preview-stats"><span>内容总数<strong>{snapshotDraftCount}</strong></span><span>已排期<strong>{scheduledCount}</strong></span><span>待处理<strong>{snapshotDraftCount - scheduledCount}</strong></span></div>
+                    <table className="preview-table">
+                      <tbody>
+                        <tr><td>draft-001</td><td>{replayStatus}</td><td><button type="button" disabled={replayStatus === "已排期"}>{replayStatus === "已排期" ? "已排期" : "排期发布"}</button></td></tr>
+                        <tr><td>draft-002</td><td>{snapshotDraftStatuses["draft-002"] ?? "已删除"}</td><td><button type="button" disabled>{draftControlLabel(snapshotDraftStatuses["draft-002"])}</button></td></tr>
+                        <tr><td>draft-003</td><td>{snapshotDraftStatuses["draft-003"] ?? "已删除"}</td><td><button type="button" disabled>{draftControlLabel(snapshotDraftStatuses["draft-003"])}</button></td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
               <div className="trace-panel">
                 <h2>动作轨迹</h2>
                 <div className="trace-list">
-                  <div className={currentReplayStep === 0 ? "trace-item trace-item-active" : "trace-item"}><span className="trace-dot" /><strong>初始状态</strong><small>{initialState.draftCount} 条内容，draft-001 为{initialState.draftStatuses["draft-001"] ?? "不存在"}</small></div>
+                  <div className={currentReplayStep === 0 ? "trace-item trace-item-active" : "trace-item"}><span className="trace-dot" /><strong>{isPolicyBlocked ? "策略前置拦截" : "初始状态"}</strong><small>{isPolicyBlocked ? `风险分 ${policyBlocks[0].score}，浏览器未启动` : `${initialDraftCount} 条内容，draft-001 为${initialDraftStatuses["draft-001"] ?? "不存在"}`}</small></div>
                   {replayActions.map((action, index) => (
                     <div className={currentReplayStep === index + 1 ? "trace-item trace-item-active" : "trace-item"} key={`${index + 1}-${action.type}-${action.selector}`}>
                       <span className="trace-dot" /><strong>{formatPlanAction(action)}</strong><small className="code-text">{action.type} · {action.selector}</small>
@@ -898,6 +916,7 @@ function Dashboard() {
 }
 
 function App() {
+  if (window.location.pathname.startsWith("/showcase")) return <Portfolio />;
   return window.location.pathname.startsWith("/sandbox") ? <Sandbox /> : <Dashboard />;
 }
 

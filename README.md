@@ -56,6 +56,10 @@ npm.cmd run dev
 
 Open `http://localhost:5173/` for the TrustBench run console. The creator sandbox used by benchmark tasks lives at `http://localhost:5173/sandbox/`. The console loads every recorded run from `benchmark/runs`, lets you select a run for its overview and replay snapshots, and compares two real runs side by side.
 
+Open `http://localhost:5173/showcase/` for the interview-ready product case study and interactive risk-routing demo.
+
+![TrustBench AI product portfolio and interactive demo](docs/images/trustbench-portfolio.png)
+
 Evaluate a recorded run:
 
 ```powershell
