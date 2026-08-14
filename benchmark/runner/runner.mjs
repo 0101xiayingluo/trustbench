@@ -90,6 +90,9 @@ export async function runTask({
       stepCount: plan.actions.length,
       planActions: plan.actions.map((action) => structuredClone(action)),
       snapshots,
+      ...(plan.agent && typeof plan.agent === "object" && !Array.isArray(plan.agent)
+        ? { agent: structuredClone(plan.agent) }
+        : {}),
     };
 
     return {

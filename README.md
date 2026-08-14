@@ -4,6 +4,8 @@ TrustBench is a benchmark, safety-control, and replay platform for computer-use 
 
 ![TrustBench run console showing evaluation metrics, execution pipeline, and assertion results](docs/images/trustbench-console.png)
 
+Product case study and acceptance criteria: [TrustBench PRD](docs/PRD.md)
+
 ## Problem
 
 Computer-use agents may complete tasks through unsafe, inefficient, or unreliable action paths. TrustBench evaluates both task outcomes and execution trajectories.
@@ -18,6 +20,8 @@ Computer-use agents may complete tasks through unsafe, inefficient, or unreliabl
 - Execution replay and comparison
 - Batch suite execution and aggregate reports
 - External Agent command adapter with restricted action validation
+- Real OpenAI Agent integration with structured action plans
+- Per-run and batch Token, estimated cost, and API latency metrics
 - Browser console task catalog and one-click Runner jobs
 - CI verification and Docker deployment
 
@@ -62,6 +66,22 @@ Run an external Agent adapter. The command receives `{"task": ...}` on stdin and
 npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --agent-command "node benchmark/agents/example-agent.mjs" --pretty
 ```
 
+Run a real OpenAI Agent:
+
+```powershell
+Copy-Item .env.example .env
+# Add your OPENAI_API_KEY to .env, then start the console or run the CLI:
+npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --agent-command "node benchmark/agents/openai-agent.mjs" --pretty
+```
+
+The task center exposes the same OpenAI Agent option when the key is configured. `run.json` records the provider, model, response ID, prompt version, input/output/cached/reasoning Token counts, API latency, and estimated USD cost. Cost is an estimate based on a dated built-in price snapshot for the default model or the optional `OPENAI_*_COST_PER_1M` overrides in `.env`; it is not a billing statement.
+
+Run the four-case real-model suite:
+
+```powershell
+npm.cmd run batch -- --suite benchmark/suites/creator-openai.json --continue-on-error --pretty
+```
+
 For a production-style local deployment:
 
 ```powershell
@@ -74,6 +94,6 @@ See [benchmark/README.md](benchmark/README.md) for the evaluator contract, repor
 
 ## Status
 
-Implemented: simulated creator environment, automatic evaluator, restricted end-to-end Runner, per-step replay snapshots, historical run records, batch suites, external Agent command integration, task/job APIs, run comparison console, CI, and container deployment.
+Implemented: simulated creator environment, automatic evaluator, restricted end-to-end Runner, per-step replay snapshots, historical run records, batch suites, real OpenAI Agent integration, Token/cost/latency observability, task/job APIs, run comparison console, CI, and container deployment.
 
 This is a complete local benchmark product. Hosted multi-tenant auth, remote Agent credential management, and distributed worker scheduling remain intentionally outside the local deployment scope.

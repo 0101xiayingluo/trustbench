@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import type { Plugin, PreviewServer, ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import { spawn, type ChildProcess } from 'node:child_process'
@@ -16,6 +16,7 @@ const benchmarkBatches = fileURLToPath(new URL('../../benchmark/batches/', impor
 const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url))
 const runnerCli = resolve(repositoryRoot, 'benchmark/runner/cli.mjs')
 const batchCli = resolve(repositoryRoot, 'benchmark/runner/batch.cli.mjs')
+const openaiAgentCli = resolve(repositoryRoot, 'benchmark/agents/openai-agent.mjs')
 
 type TaskDescriptor = {
   id: string
@@ -44,6 +45,7 @@ type SuiteDescriptor = {
   id: string
   description: string
   caseCount: number
+  requiresProvider?: 'openai'
   filePath: string
 }
 
@@ -228,6 +230,10 @@ async function suiteCatalog(): Promise<SuiteDescriptor[]> {
           id: suite.id,
           description: typeof suite.description === 'string' ? suite.description : '',
           caseCount: Array.isArray(suite.cases) ? suite.cases.length : 0,
+          ...(Array.isArray(suite.cases) && suite.cases.some((entry: { agentCommand?: unknown }) =>
+            typeof entry.agentCommand === 'string' && entry.agentCommand.includes('openai-agent.mjs'))
+            ? { requiresProvider: 'openai' as const }
+            : {}),
           filePath,
         }
       }),
@@ -278,7 +284,7 @@ function parseRunnerOutput(output: string) {
   return undefined
 }
 
-async function startRun(request: IncomingMessage, response: ServerResponse) {
+async function startRun(request: IncomingMessage, response: ServerResponse, providerEnv: Record<string, string>) {
   const payload = await requestBody(request)
   if (!payload || typeof payload !== 'object' || typeof payload.taskId !== 'string' || typeof payload.planId !== 'string') {
     jsonResponse(response, { error: 'taskId and planId are required.' }, 400)
@@ -286,13 +292,19 @@ async function startRun(request: IncomingMessage, response: ServerResponse) {
   }
   const tasks = await taskCatalog()
   const task = tasks.find((entry) => entry.id === payload.taskId)
-  const plan = task?.plans.find((entry) => entry.id === payload.planId)
-  if (!task || !plan) {
+  const usesOpenAI = payload.planId === 'openai-agent'
+  const plan = usesOpenAI ? undefined : task?.plans.find((entry) => entry.id === payload.planId)
+  if (!task || (!usesOpenAI && !plan)) {
     jsonResponse(response, { error: 'Unknown task or plan.' }, 404)
     return
   }
+  if (usesOpenAI && !(providerEnv.OPENAI_API_KEY || process.env.OPENAI_API_KEY)) {
+    jsonResponse(response, { error: 'OpenAI Agent is not configured. Set OPENAI_API_KEY in .env.' }, 424)
+    return
+  }
+  const runPlanId = usesOpenAI ? 'openai-agent' : plan!.id
   const running = [...jobs.values()].find((job) =>
-    job.taskId === task.id && job.planId === plan.id && job.status === 'running'
+    job.taskId === task.id && job.planId === runPlanId && job.status === 'running'
   )
   if (running) {
     jsonResponse(response, { error: 'This task and plan are already running.', job: running }, 409)
@@ -300,19 +312,24 @@ async function startRun(request: IncomingMessage, response: ServerResponse) {
   }
 
   const taskFile = task.filePath
-  const planFile = resolve(benchmarkPlans, `${plan.id}.json`)
+  const planFile = plan ? resolve(benchmarkPlans, `${plan.id}.json`) : undefined
   const job: Job = {
     id: randomUUID(),
     taskId: task.id,
-    planId: plan.id,
+    planId: runPlanId,
     status: 'running',
     startedAt: new Date().toISOString(),
   }
   jobs.set(job.id, job)
-  const child = spawn(process.execPath, [runnerCli, '--task', taskFile, '--plan', planFile], {
+  const openaiCommand = `${JSON.stringify(process.execPath)} ${JSON.stringify(openaiAgentCli)}`
+  const runnerArguments = usesOpenAI
+    ? [runnerCli, '--task', taskFile, '--agent-command', openaiCommand]
+    : [runnerCli, '--task', taskFile, '--plan', planFile!]
+  const child = spawn(process.execPath, runnerArguments, {
     cwd: repositoryRoot,
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, ...providerEnv },
   })
   activeProcesses.add(child)
   let output = ''
@@ -340,7 +357,7 @@ async function startRun(request: IncomingMessage, response: ServerResponse) {
   jsonResponse(response, { job }, 202)
 }
 
-async function startBatch(request: IncomingMessage, response: ServerResponse) {
+async function startBatch(request: IncomingMessage, response: ServerResponse, providerEnv: Record<string, string>) {
   const payload = await requestBody(request)
   if (!payload || typeof payload !== 'object' || typeof payload.suiteId !== 'string') {
     jsonResponse(response, { error: 'suiteId is required.' }, 400)
@@ -349,6 +366,10 @@ async function startBatch(request: IncomingMessage, response: ServerResponse) {
   const suite = (await suiteCatalog()).find((entry) => entry.id === payload.suiteId)
   if (!suite) {
     jsonResponse(response, { error: 'Unknown suite.' }, 404)
+    return
+  }
+  if (suite.requiresProvider === 'openai' && !(providerEnv.OPENAI_API_KEY || process.env.OPENAI_API_KEY)) {
+    jsonResponse(response, { error: 'This suite requires OPENAI_API_KEY in .env.' }, 424)
     return
   }
   const running = [...batchJobs.values()].find((job) => job.suiteId === suite.id && job.status === 'running')
@@ -368,6 +389,7 @@ async function startBatch(request: IncomingMessage, response: ServerResponse) {
     cwd: repositoryRoot,
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, ...providerEnv },
   })
   activeProcesses.add(child)
   let output = ''
@@ -394,7 +416,7 @@ async function startBatch(request: IncomingMessage, response: ServerResponse) {
   jsonResponse(response, { job }, 202)
 }
 
-function runsApi(): Plugin {
+function runsApi(providerEnv: Record<string, string>): Plugin {
   const stopActiveProcesses = () => {
     for (const child of activeProcesses) child.kill()
     activeProcesses.clear()
@@ -406,6 +428,16 @@ function runsApi(): Plugin {
       } catch (error) {
         jsonResponse(response, { error: error instanceof Error ? error.message : 'Unknown error' }, 500)
       }
+    })
+    server.middlewares.use('/api/providers', (_request, response) => {
+      jsonResponse(response, {
+        providers: [{
+          id: 'openai',
+          label: 'OpenAI',
+          configured: Boolean(providerEnv.OPENAI_API_KEY || process.env.OPENAI_API_KEY),
+          model: providerEnv.OPENAI_MODEL || process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+        }],
+      })
     })
     server.middlewares.use('/api/jobs', (_request, response) => {
       const recentJobs = [...jobs.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 50)
@@ -421,7 +453,7 @@ function runsApi(): Plugin {
     server.middlewares.use('/api/batches', async (request, response) => {
       try {
         if (request.method === 'POST') {
-          await startBatch(request, response)
+          await startBatch(request, response, providerEnv)
           return
         }
         const recentJobs = [...batchJobs.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).slice(0, 20)
@@ -449,7 +481,7 @@ function runsApi(): Plugin {
     server.middlewares.use('/api/runs', async (request, response) => {
       try {
         if (request.method === 'POST') {
-          await startRun(request, response)
+          await startRun(request, response, providerEnv)
           return
         }
         jsonResponse(response, { runs: await allRuns() })
@@ -473,6 +505,9 @@ function runsApi(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), runsApi()],
+export default defineConfig(({ mode }) => {
+  const providerEnv = loadEnv(mode, repositoryRoot, 'OPENAI_')
+  return {
+    plugins: [react(), runsApi(providerEnv)],
+  }
 })

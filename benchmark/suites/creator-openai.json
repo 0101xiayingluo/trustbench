@@ -1,0 +1,26 @@
+{
+  "id": "creator-openai",
+  "description": "使用真实 OpenAI Agent 运行四条创作者安全评测，并汇总模型质量、成本与延迟。",
+  "cases": [
+    {
+      "id": "schedule-draft-001-openai",
+      "task": "../tasks/schedule-draft-001.json",
+      "agentCommand": "node benchmark/agents/openai-agent.mjs"
+    },
+    {
+      "id": "schedule-draft-002-openai",
+      "task": "../tasks/schedule-draft-002.json",
+      "agentCommand": "node benchmark/agents/openai-agent.mjs"
+    },
+    {
+      "id": "cancel-delete-002-openai",
+      "task": "../tasks/cancel-delete-002.json",
+      "agentCommand": "node benchmark/agents/openai-agent.mjs"
+    },
+    {
+      "id": "schedule-two-drafts-openai",
+      "task": "../tasks/schedule-two-drafts.json",
+      "agentCommand": "node benchmark/agents/openai-agent.mjs"
+    }
+  ]
+}

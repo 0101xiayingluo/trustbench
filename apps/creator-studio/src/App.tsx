@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Sandbox from "./Sandbox";
 import type {
+  AgentProvider,
   BatchJob,
   BatchRecord,
   EvaluationReport,
@@ -36,6 +37,27 @@ const safeRun: RecordedRun = {
     },
   ],
   stepCount: 1,
+  agent: {
+    provider: "openai",
+    model: "gpt-4.1-mini",
+    responseId: "resp_example",
+    promptVersion: "trustbench-plan-v1",
+    latencyMs: 842,
+    usage: {
+      inputTokens: 684,
+      cachedInputTokens: 0,
+      outputTokens: 96,
+      reasoningTokens: 0,
+      totalTokens: 780,
+    },
+    cost: {
+      currency: "USD",
+      estimatedUsd: 0.0004272,
+      pricingSource: "builtin",
+      pricingAsOf: "2025-04-14",
+      ratesPerMillion: { input: 0.4, cachedInput: 0.1, output: 1.6 },
+    },
+  },
 };
 
 const safeReport: EvaluationReport = {
@@ -113,6 +135,20 @@ function formatJobStatus(status: JobRecord["status"]) {
   return status === "running" ? "运行中" : status === "passed" ? "通过" : status === "failed" ? "失败" : "错误";
 }
 
+function formatTokens(value: number | undefined) {
+  return typeof value === "number" ? new Intl.NumberFormat("zh-CN").format(value) : "—";
+}
+
+function formatLatency(value: number | null | undefined) {
+  if (typeof value !== "number") return "—";
+  return value < 1000 ? `${value} ms` : `${(value / 1000).toFixed(2)} s`;
+}
+
+function formatCost(value: number | null | undefined) {
+  if (typeof value !== "number") return "未定价";
+  return `$${value < 0.01 ? value.toFixed(6) : value.toFixed(4)}`;
+}
+
 async function fetchJson<T>(url: string): Promise<T | undefined> {
   try {
     const response = await fetch(url);
@@ -134,6 +170,7 @@ function Dashboard() {
   const [suites, setSuites] = useState<SuiteDescriptor[]>([]);
   const [batches, setBatches] = useState<BatchRecord[]>([]);
   const [batchJobs, setBatchJobs] = useState<BatchJob[]>([]);
+  const [providers, setProviders] = useState<AgentProvider[]>([]);
   const [startingTask, setStartingTask] = useState<string>();
   const [startingSuite, setStartingSuite] = useState<string>();
   const [runError, setRunError] = useState<string>();
@@ -173,12 +210,13 @@ function Dashboard() {
   useEffect(() => {
     let cancelled = false;
     async function refresh() {
-      const [runData, taskData, jobData, suiteData, batchData] = await Promise.all([
+      const [runData, taskData, jobData, suiteData, batchData, providerData] = await Promise.all([
         fetchJson<{ runs: RunRecord[] }>("/api/runs"),
         fetchJson<{ tasks: TaskDescriptor[] }>("/api/tasks"),
         fetchJson<{ jobs: JobRecord[] }>("/api/jobs"),
         fetchJson<{ suites: SuiteDescriptor[] }>("/api/suites"),
         fetchJson<{ batches: BatchRecord[]; jobs: BatchJob[] }>("/api/batches"),
+        fetchJson<{ providers: AgentProvider[] }>("/api/providers"),
       ]);
       if (cancelled) return;
       if (runData) {
@@ -193,6 +231,7 @@ function Dashboard() {
         setBatches(batchData.batches);
         setBatchJobs(batchData.jobs);
       }
+      if (providerData) setProviders(providerData.providers);
     }
     void refresh();
     const timer = window.setInterval(() => void refresh(), 2000);
@@ -270,6 +309,8 @@ function Dashboard() {
     [runFilter, runRecords]
   );
   const activeJobCount = jobs.filter((job) => job.status === "running").length + batchJobs.filter((job) => job.status === "running").length;
+  const openAIProvider = providers.find((provider) => provider.id === "openai");
+  const openAIConfigured = openAIProvider?.configured ?? false;
   const pageTitle = view === "tasks" ? "任务中心" : view === "replay" ? "轨迹回放" : view === "compare" ? "运行对比" : "运行详情";
   const pageMeta = view === "tasks"
     ? `本地任务目录 · ${tasks.length} 个任务`
@@ -384,6 +425,7 @@ function Dashboard() {
               <div className="suite-grid">
                 {suites.map((suite) => {
                   const running = batchJobs.some((job) => job.suiteId === suite.id && job.status === "running");
+                  const providerUnavailable = suite.requiresProvider === "openai" && !openAIConfigured;
                   return (
                     <article className="suite-card" key={suite.id}>
                       <div className="suite-card-copy">
@@ -391,8 +433,13 @@ function Dashboard() {
                         <h3>{suite.id}</h3>
                         <p>{suite.description}</p>
                       </div>
-                      <button type="button" disabled={running || startingSuite !== undefined} onClick={() => void startBatch(suite.id)}>
-                        {running || startingSuite === suite.id ? "批量运行中…" : "运行整套评测"}
+                      <button
+                        type="button"
+                        disabled={running || startingSuite !== undefined || providerUnavailable}
+                        title={providerUnavailable ? "在 .env 中配置 OPENAI_API_KEY 后可用" : undefined}
+                        onClick={() => void startBatch(suite.id)}
+                      >
+                        {providerUnavailable ? "需配置 OpenAI" : running || startingSuite === suite.id ? "批量运行中…" : "运行整套评测"}
                       </button>
                     </article>
                   );
@@ -409,7 +456,7 @@ function Dashboard() {
                       <div className="batch-history-row" key={batch.id}>
                         <span className={passed ? "batch-result batch-result-pass" : "batch-result batch-result-fail"}>{passed ? "通过" : "失败"}</span>
                         <strong>{batch.summary.suiteId}</strong>
-                        <span>{batch.summary.passed} / {batch.summary.total} 用例通过</span>
+                        <span>{batch.summary.passed} / {batch.summary.total} 用例通过{batch.summary.agentMetrics ? ` · ${formatTokens(batch.summary.agentMetrics.totalTokens)} tokens` : ""}</span>
                         <time dateTime={batch.createdAt}>{formatRunDate(batch.createdAt)}</time>
                       </div>
                     );
@@ -422,7 +469,9 @@ function Dashboard() {
                 <h2>任务目录</h2>
                 <p className="section-caption">选择单条受限计划，Runner 会自动写入运行记录。</p>
               </div>
-              <span className="section-caption">{tasks.length} 个任务</span>
+              <span className={openAIConfigured ? "provider-status provider-status-ready" : "provider-status"}>
+                <span />{openAIProvider?.model ?? "OpenAI"} · {openAIConfigured ? "已连接" : "未配置"}
+              </span>
             </div>
             {tasks.length === 0 ? (
               <div className="task-empty">暂无任务清单，请先在 benchmark/tasks 和 benchmark/plans 中添加 JSON 定义。</div>
@@ -438,8 +487,18 @@ function Dashboard() {
                       <span className="task-version">v{task.version ?? "?"}</span>
                     </div>
                     <p>{task.instruction}</p>
-                    <div className="task-card-meta"><span>最多 {task.maxSteps} 步</span><span>{task.plans.length} 个计划</span></div>
+                    <div className="task-card-meta"><span>最多 {task.maxSteps} 步</span><span>{task.plans.length} 个静态计划</span></div>
                     <div className="task-plan-list">
+                      <button
+                        className="task-plan task-plan-agent"
+                        type="button"
+                        disabled={!openAIConfigured || startingTask !== undefined}
+                        title={openAIConfigured ? `使用 ${openAIProvider?.model ?? "OpenAI"} 生成动作计划` : "在 .env 中配置 OPENAI_API_KEY 后可用"}
+                        onClick={() => void startTask(task.id, "openai-agent")}
+                      >
+                        <span>真实模型</span>
+                        <strong>{startingTask === `${task.id}:openai-agent` ? "生成计划中…" : openAIConfigured ? "OpenAI Agent" : "需配置密钥"}</strong>
+                      </button>
                       {task.plans.map((plan) => {
                         const jobKey = `${task.id}:${plan.id}`;
                         const running = jobs.some((job) => job.taskId === task.id && job.planId === plan.id && job.status === "running");
@@ -502,6 +561,35 @@ function Dashboard() {
               </div>
             </div>
 
+            <div className="section-heading-row agent-metrics-heading">
+              <div>
+                <h2>LLM Agent 指标</h2>
+                <p className="section-caption">{run.agent ? `${run.agent.provider} · ${run.agent.model} · ${run.agent.promptVersion}` : "当前运行未调用模型"}</p>
+              </div>
+              {run.agent && <span className="agent-call-badge">{selectedRecord.id === "example/safe" ? "指标示例" : "真实调用"}</span>}
+            </div>
+            {run.agent ? (
+              <div className="agent-metrics-grid">
+                <div className="agent-metric">
+                  <span>Token 总量</span>
+                  <strong>{formatTokens(run.agent.usage.totalTokens)}</strong>
+                  <small>输入 {formatTokens(run.agent.usage.inputTokens)} · 输出 {formatTokens(run.agent.usage.outputTokens)}</small>
+                </div>
+                <div className="agent-metric">
+                  <span>API 延迟</span>
+                  <strong>{formatLatency(run.agent.latencyMs)}</strong>
+                  <small>仅模型请求耗时</small>
+                </div>
+                <div className="agent-metric">
+                  <span>估算成本</span>
+                  <strong>{formatCost(run.agent.cost.estimatedUsd)}</strong>
+                  <small>{run.agent.cost.pricingSource === "environment" ? "环境定价" : run.agent.cost.pricingSource === "builtin" ? `价格快照 ${run.agent.cost.pricingAsOf}` : "请配置模型单价"}</small>
+                </div>
+              </div>
+            ) : (
+              <div className="agent-metrics-empty">该记录使用静态计划，因此没有模型 Token、成本或延迟数据。</div>
+            )}
+
             <h2>执行流水线</h2>
             <div className="pipeline" aria-label="执行流水线">
               {["启动环境", "创建浏览器", "执行计划", "采集状态", "自动评测"].map((stage) => (
@@ -540,7 +628,7 @@ function Dashboard() {
               </table>
             </div>
             <div className="footer-line">
-              <span>环境 creator-default</span><span>浏览器 Edge</span><span>步数 {report.stepCount}</span><span>报告 report.json</span>
+              <span>环境 creator-default</span><span>浏览器 Edge</span><span>步数 {report.stepCount}</span>{run.agent && <span>模型 {run.agent.model}</span>}<span>报告 report.json</span>
             </div>
           </section>
         )}
@@ -592,7 +680,19 @@ function Dashboard() {
                   <div><span>{compareRecord.id}</span><strong className={compareRecord.report.passed ? "metric-pass" : "metric-fail"}>{compareRecord.report.passed ? "评测通过" : "评测失败"}</strong><p>{compareRecord.run.stepCount} 步 · {compareRecord.report.dimensions.safety.violations.length} 违规</p></div>
                 </div>
                 <h2>路径差异</h2>
-                <div className="table-scroll"><table className="results-table"><thead><tr><th>维度</th><th>{selectedRecord.id}</th><th>{compareRecord.id}</th><th>结果</th></tr></thead><tbody><tr><td>总评</td><td className={selectedRecord.report.passed ? "metric-pass" : "metric-fail"}>{selectedRecord.report.score.toFixed(1)}</td><td className={compareRecord.report.passed ? "metric-pass" : "metric-fail"}>{compareRecord.report.score.toFixed(1)}</td><td>{selectedRecord.report.score >= compareRecord.report.score ? "基准路径更优" : "对比路径更优"}</td></tr><tr><td>安全违规</td><td>{selectedRecord.report.dimensions.safety.violations.length} 次</td><td>{compareRecord.report.dimensions.safety.violations.length} 次</td><td className={compareRecord.report.dimensions.safety.violations.length > selectedRecord.report.dimensions.safety.violations.length ? "metric-fail" : "metric-pass"}>{compareRecord.report.dimensions.safety.violations.length > selectedRecord.report.dimensions.safety.violations.length ? "对比路径更危险" : "安全性相当或更好"}</td></tr><tr><td>最终内容数</td><td>{selectedRecord.run.finalState.draftCount}</td><td>{compareRecord.run.finalState.draftCount}</td><td>{selectedRecord.run.finalState.draftCount === compareRecord.run.finalState.draftCount ? "一致" : "状态不同"}</td></tr></tbody></table></div>
+                <div className="table-scroll">
+                  <table className="results-table">
+                    <thead><tr><th>维度</th><th>{selectedRecord.id}</th><th>{compareRecord.id}</th><th>结果</th></tr></thead>
+                    <tbody>
+                      <tr><td>总评</td><td className={selectedRecord.report.passed ? "metric-pass" : "metric-fail"}>{selectedRecord.report.score.toFixed(1)}</td><td className={compareRecord.report.passed ? "metric-pass" : "metric-fail"}>{compareRecord.report.score.toFixed(1)}</td><td>{selectedRecord.report.score >= compareRecord.report.score ? "基准路径更优" : "对比路径更优"}</td></tr>
+                      <tr><td>安全违规</td><td>{selectedRecord.report.dimensions.safety.violations.length} 次</td><td>{compareRecord.report.dimensions.safety.violations.length} 次</td><td className={compareRecord.report.dimensions.safety.violations.length > selectedRecord.report.dimensions.safety.violations.length ? "metric-fail" : "metric-pass"}>{compareRecord.report.dimensions.safety.violations.length > selectedRecord.report.dimensions.safety.violations.length ? "对比路径更危险" : "安全性相当或更好"}</td></tr>
+                      <tr><td>执行步数</td><td>{selectedRecord.run.stepCount}</td><td>{compareRecord.run.stepCount}</td><td>{selectedRecord.run.stepCount <= compareRecord.run.stepCount ? "基准路径更短" : "对比路径更短"}</td></tr>
+                      <tr><td>模型 Token</td><td>{formatTokens(selectedRecord.run.agent?.usage.totalTokens)}</td><td>{formatTokens(compareRecord.run.agent?.usage.totalTokens)}</td><td>{selectedRecord.run.agent && compareRecord.run.agent ? selectedRecord.run.agent.usage.totalTokens <= compareRecord.run.agent.usage.totalTokens ? "基准消耗更低" : "对比消耗更低" : "缺少模型指标"}</td></tr>
+                      <tr><td>API 延迟</td><td>{formatLatency(selectedRecord.run.agent?.latencyMs)}</td><td>{formatLatency(compareRecord.run.agent?.latencyMs)}</td><td>{selectedRecord.run.agent && compareRecord.run.agent ? selectedRecord.run.agent.latencyMs <= compareRecord.run.agent.latencyMs ? "基准响应更快" : "对比响应更快" : "缺少模型指标"}</td></tr>
+                      <tr><td>估算成本</td><td>{formatCost(selectedRecord.run.agent?.cost.estimatedUsd)}</td><td>{formatCost(compareRecord.run.agent?.cost.estimatedUsd)}</td><td>{typeof selectedRecord.run.agent?.cost.estimatedUsd === "number" && typeof compareRecord.run.agent?.cost.estimatedUsd === "number" ? selectedRecord.run.agent.cost.estimatedUsd <= compareRecord.run.agent.cost.estimatedUsd ? "基准成本更低" : "对比成本更低" : "缺少定价"}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
           </section>

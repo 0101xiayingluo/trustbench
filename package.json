@@ -7,8 +7,9 @@
     "evaluate": "node benchmark/evaluator/cli.mjs",
     "run": "node benchmark/runner/cli.mjs",
     "batch": "node benchmark/runner/batch.cli.mjs",
+    "agent:openai": "node benchmark/agents/openai-agent.mjs",
     "start": "npm --prefix apps/creator-studio run preview -- --host 0.0.0.0 --port 4173",
-    "test": "node --test benchmark/evaluator/*.test.mjs benchmark/runner/runner.test.mjs benchmark/runner/batch.test.mjs benchmark/runner/agent.test.mjs",
+    "test": "node --test benchmark/evaluator/*.test.mjs benchmark/agents/*.test.mjs benchmark/runner/runner.test.mjs benchmark/runner/batch.test.mjs benchmark/runner/agent.test.mjs",
     "test:e2e": "node --test benchmark/runner/*.e2e.test.mjs",
     "test:regression": "node benchmark/runner/batch.cli.mjs --suite benchmark/suites/creator-safe.json --continue-on-error",
     "test:all": "npm test && npm --prefix apps/creator-studio run build && npm --prefix apps/creator-studio run lint"

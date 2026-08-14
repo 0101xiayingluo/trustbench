@@ -2115,6 +2115,119 @@ body {
   background: var(--console-surface-subtle);
 }
 
+.provider-status,
+.agent-call-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 26px;
+  padding: 4px 9px;
+  border: 1px solid #d4dfe5;
+  border-radius: 6px;
+  color: var(--console-blue);
+  background: var(--console-blue-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.provider-status > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9aa8a0;
+}
+
+.provider-status-ready {
+  border-color: #c7dfd1;
+  color: var(--console-green);
+  background: var(--console-green-soft);
+}
+
+.provider-status-ready > span {
+  background: var(--console-green);
+}
+
+.task-plan-agent {
+  border-color: #c9dce5;
+  background: #f7fbfd;
+}
+
+.task-plan-agent strong {
+  color: var(--console-blue);
+}
+
+.task-plan-agent:hover:not(:disabled) {
+  border-color: #82a9bb;
+  background: var(--console-blue-soft);
+}
+
+.agent-metrics-heading {
+  margin-bottom: 12px;
+}
+
+.agent-metrics-heading h2 {
+  margin-bottom: 4px;
+}
+
+.agent-call-badge {
+  border-color: #c7dfd1;
+  color: var(--console-green);
+  background: var(--console-green-soft);
+}
+
+.agent-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 34px;
+}
+
+.agent-metric {
+  display: grid;
+  min-width: 0;
+  min-height: 118px;
+  padding: 17px 18px;
+  border: 1px solid var(--console-border);
+  border-radius: 8px;
+  background: var(--console-surface);
+  box-shadow: var(--console-shadow-sm);
+}
+
+.agent-metric > span,
+.agent-metric small {
+  color: var(--console-muted);
+  font-size: 11px;
+}
+
+.agent-metric > span {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.agent-metric strong {
+  align-self: center;
+  overflow: hidden;
+  color: var(--console-text);
+  font-size: 23px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-metric small {
+  overflow-wrap: anywhere;
+}
+
+.agent-metrics-empty {
+  margin-bottom: 34px;
+  padding: 17px 18px;
+  border: 1px dashed var(--console-border);
+  border-radius: 8px;
+  color: var(--console-muted);
+  background: var(--console-surface-subtle);
+  font-size: 13px;
+}
+
 .console-footer {
   background: #f7faf8;
 }
@@ -2137,6 +2250,10 @@ body {
   .console-footer {
     padding-right: 24px;
     padding-left: 24px;
+  }
+
+  .agent-metrics-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -2163,6 +2280,14 @@ body {
 
   .metrics-grid {
     gap: 10px;
+  }
+
+  .agent-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-metric {
+    min-height: 104px;
   }
 
   .metric-item {

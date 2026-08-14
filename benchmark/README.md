@@ -68,6 +68,14 @@ Use `--agent-command` instead of `--plan` to connect any local Agent process. Tr
 npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --agent-command "node benchmark/agents/example-agent.mjs" --pretty
 ```
 
+`benchmark/agents/openai-agent.mjs` is the production Agent adapter. It calls the OpenAI Responses API with a strict JSON Schema, normalizes the plan, and returns model metadata alongside the actions. Configure `OPENAI_API_KEY` and optionally `OPENAI_MODEL`, `OPENAI_BASE_URL`, `OPENAI_TIMEOUT_MS`, and per-million-token pricing overrides in `.env`.
+
+```powershell
+npm.cmd run run -- --task benchmark/tasks/schedule-draft-001.json --agent-command "node benchmark/agents/openai-agent.mjs" --pretty
+```
+
+Real-model runs add an `agent` object to `run.json`. It contains the provider, resolved model, response ID, Prompt version, input/cached/output/reasoning/total Token counts, API latency, and estimated cost. Unknown model pricing is represented by `estimatedUsd: null`; it is never reported as zero.
+
 The adapter is still evaluated by `validatePlan`, so an Agent cannot bypass selector, action type, dialog, or task ID constraints.
 
 ## Run history and console API
@@ -90,6 +98,8 @@ npm.cmd run batch -- --suite benchmark/suites/creator-smoke.json --continue-on-e
 The command writes a batch summary under `benchmark/batches/` and individual case records under `benchmark/runs/`. It exits `0` only when every case passed; `--continue-on-error` keeps executing later cases after a failure.
 
 `benchmark/suites/creator-safe.json` is the release regression suite and covers four passing creator workflows. `creator-smoke.json` is a shorter two-case suite for local iteration.
+
+`benchmark/suites/creator-openai.json` runs the same four workflows through the real OpenAI Agent. Its `batch.json` includes aggregate calls, models, Token counts, average latency, priced-call count, and estimated cost. Keep CI on the deterministic suite unless external API spend is explicitly intended.
 
 When the creator app is running, the console uses these endpoints:
 

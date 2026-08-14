@@ -54,6 +54,32 @@ export async function readJson(path, label) {
   }
 }
 
+export function summarizeAgentMetrics(cases) {
+  const agents = cases.map((entry) => entry.agent).filter(isRecord);
+  if (agents.length === 0) return undefined;
+  const costs = agents
+    .map((agent) => agent.cost?.estimatedUsd)
+    .filter((value) => typeof value === "number" && Number.isFinite(value));
+  const sum = (values) => values.reduce((total, value) => total + value, 0);
+  const usage = agents.map((agent) => isRecord(agent.usage) ? agent.usage : {});
+  const latencies = agents
+    .map((agent) => agent.latencyMs)
+    .filter((value) => typeof value === "number" && Number.isFinite(value));
+  return {
+    calls: agents.length,
+    models: [...new Set(agents.map((agent) => agent.model).filter((value) => typeof value === "string"))],
+    inputTokens: sum(usage.map((entry) => Number(entry.inputTokens) || 0)),
+    cachedInputTokens: sum(usage.map((entry) => Number(entry.cachedInputTokens) || 0)),
+    outputTokens: sum(usage.map((entry) => Number(entry.outputTokens) || 0)),
+    totalTokens: sum(usage.map((entry) => Number(entry.totalTokens) || 0)),
+    averageLatencyMs: latencies.length > 0 ? Math.round(sum(latencies) / latencies.length) : null,
+    estimatedCostUsd: costs.length === agents.length
+      ? Number(sum(costs).toFixed(8))
+      : null,
+    pricedCalls: costs.length,
+  };
+}
+
 export async function runSuite({
   suite,
   suitePath,
@@ -93,6 +119,7 @@ export async function runSuite({
         score: result.report.score,
         stepCount: result.report.stepCount,
         failures: result.report.failures,
+        ...(result.run.agent ? { agent: result.run.agent } : {}),
         artifacts,
       });
       if (!result.report.passed && !continueOnError) {
@@ -118,6 +145,7 @@ export async function runSuite({
     }
   }
 
+  const agentMetrics = summarizeAgentMetrics(cases);
   const summary = {
     suiteId: suite.id,
     startedAt: batchStartedAt,
@@ -128,6 +156,7 @@ export async function runSuite({
     failed: cases.filter((entry) => !entry.passed).length,
     complete: cases.length === suite.cases.length,
     cases,
+    ...(agentMetrics ? { agentMetrics } : {}),
     artifacts: { directory: batchDirectory },
   };
   await writeFile(

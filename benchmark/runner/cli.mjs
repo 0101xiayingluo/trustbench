@@ -151,6 +151,7 @@ async function main() {
       `${JSON.stringify(
         {
           ...result.report,
+          ...(result.run.agent ? { agent: result.run.agent } : {}),
           artifacts: {
             ...artifacts,
           },

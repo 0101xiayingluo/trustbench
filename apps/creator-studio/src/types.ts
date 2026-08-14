@@ -88,6 +88,40 @@ export type RecordedRun = {
   stepCount: number;
   planActions?: PlanAction[];
   snapshots?: RunSnapshot[];
+  agent?: AgentRunMetadata;
+};
+
+export type AgentRunMetadata = {
+  provider: string;
+  model: string;
+  responseId: string | null;
+  promptVersion: string;
+  latencyMs: number;
+  usage: {
+    inputTokens: number;
+    cachedInputTokens: number;
+    outputTokens: number;
+    reasoningTokens: number;
+    totalTokens: number;
+  };
+  cost: {
+    currency: "USD";
+    estimatedUsd: number | null;
+    pricingSource: "builtin" | "environment" | "unavailable";
+    pricingAsOf: string | null;
+    ratesPerMillion: {
+      input: number;
+      cachedInput: number;
+      output: number;
+    } | null;
+  };
+};
+
+export type AgentProvider = {
+  id: "openai";
+  label: string;
+  configured: boolean;
+  model: string;
 };
 
 export type RunSnapshot = {
@@ -133,6 +167,7 @@ export type SuiteDescriptor = {
   id: string;
   description: string;
   caseCount: number;
+  requiresProvider?: "openai";
 };
 
 export type BatchSummary = {
@@ -144,6 +179,17 @@ export type BatchSummary = {
   passed: number;
   failed: number;
   complete: boolean;
+  agentMetrics?: {
+    calls: number;
+    models: string[];
+    inputTokens: number;
+    cachedInputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    averageLatencyMs: number | null;
+    estimatedCostUsd: number | null;
+    pricedCalls: number;
+  };
   artifacts: { directory: string };
 };
 
