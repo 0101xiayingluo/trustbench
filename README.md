@@ -6,6 +6,8 @@ TrustBench is an AI business-decision and governance platform for computer-use a
 
 Product case study and acceptance criteria: [TrustBench PRD](docs/PRD.md)
 
+Interview narrative and defensible metric boundaries: [Interview playbook](docs/INTERVIEW_PLAYBOOK.md)
+
 ## Problem
 
 Computer-use agents may complete tasks through unsafe, inefficient, or unreliable action paths. TrustBench evaluates both task outcomes and execution trajectories.
@@ -26,6 +28,9 @@ Computer-use agents may complete tasks through unsafe, inefficient, or unreliabl
 - Real OpenAI Agent integration with structured action plans
 - Explainable risk scoring from budget-change, ROI-gap, permission, reversibility, and operating-time signals
 - Risk bands that auto-approve scores below 40, require human review from 40 through 70, and block above 70 before model execution
+- Reproducible three-policy Pareto scan across under-governance, intervention, dangerous recall, and false blocks
+- Tested fail-closed model degradation rules for provider timeouts, invalid plans, and missing pricing
+- Adjustable business-value scenario model that separates avoided loss, review savings, maintenance, and model costs
 - Human-in-the-loop approval for high-risk launch actions
 - Per-run and batch Token, estimated cost, and API latency metrics
 - Auditable `GO`, `NO-GO`, and `insufficient-data` release decisions
@@ -55,6 +60,12 @@ npm.cmd run benchmark:governance
 ```
 
 Thresholds were not treated as a perfect first guess. On a separate 12-case closed calibration set, the initial 50/80 policy under-governed three boundary cases; the versioned 40/70 policy reduced misroutes from 3/12 to 0/12. Reproduce that report with `npm.cmd run benchmark:calibration`. This is calibration evidence, not a production-traffic claim.
+
+The selected 40/70 thresholds are also compared with automation-first 50/80 and safety-first 30/60 policies. The balanced policy has zero under-governance and zero false blocks on the closed calibration set. Automation-first reduces intervention by 16.7 percentage points but misses one of three dangerous cases; safety-first adds 8.3 percentage points of intervention and one false block without improving dangerous recall. Reproduce this trade-off report with `npm.cmd run benchmark:pareto`.
+
+Provider failure never widens an Agent's permissions. An already blocked task stays blocked; an invalid structured plan returns `NO-GO` without starting the browser; missing pricing changes the release status to `insufficient-data`; provider timeouts can use a versioned approved static plan only for low-risk work, otherwise they route to a manual queue. These are tested local degradation rules, not a claim of production auto-failover.
+
+The portfolio includes an adjustable business-value calculator. Its default output is explicitly a scenario estimate based on user-visible assumptions, not realized ROI or production loss prevention.
 
 The expanded suite was also executed for three consecutive rounds: all 16 cases were stable and all 48 executions passed. The compact evidence is stored in `benchmark/results/creator-expanded.stability.json` and can be regenerated with `npm.cmd run test:stability`.
 
@@ -123,6 +134,12 @@ Reproduce the 12-case threshold calibration report:
 npm.cmd run benchmark:calibration
 ```
 
+Reproduce the three-policy safety-efficiency trade-off report:
+
+```powershell
+npm.cmd run benchmark:pareto
+```
+
 Run an external Agent adapter. The command receives `{"task": ...}` on stdin and must print one JSON object containing a restricted `actions` array:
 
 ```powershell
@@ -159,6 +176,6 @@ See [benchmark/README.md](benchmark/README.md) for the evaluator contract, repor
 
 ## Status
 
-Implemented: simulated creator environment, automatic four-dimensional evaluator, restricted end-to-end Runner, semantic plan preflight, per-step replay snapshots, structured failure attribution, 16-case governance baseline, three-round stability runner, threshold calibration, adversarial suites, batch release gates, real OpenAI Agent integration, explainable risk routing, human approval governance, Token/cost/latency observability, release decision console, task/job APIs, run comparison, CI, and container deployment.
+Implemented: simulated creator environment, automatic four-dimensional evaluator, restricted end-to-end Runner, semantic plan preflight, per-step replay snapshots, structured failure attribution, 16-case governance baseline, three-round stability runner, threshold calibration and Pareto scan, tested model degradation rules, adjustable business-value scenario model, adversarial suites, batch release gates, real OpenAI Agent integration, explainable risk routing, human approval governance, Token/cost/latency observability, release decision console, task/job APIs, run comparison, CI, and container deployment.
 
 This is a complete local benchmark product. Hosted multi-tenant auth, remote Agent credential management, and distributed worker scheduling remain intentionally outside the local deployment scope.

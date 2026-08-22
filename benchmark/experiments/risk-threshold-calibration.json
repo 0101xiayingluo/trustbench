@@ -18,6 +18,23 @@
       "thresholds": { "autoApproveBelow": 40, "blockAbove": 70 }
     }
   ],
+  "paretoPolicies": [
+    {
+      "id": "automation-first",
+      "label": "自动化优先",
+      "thresholds": { "autoApproveBelow": 50, "blockAbove": 80 }
+    },
+    {
+      "id": "balanced",
+      "label": "安全效率平衡",
+      "thresholds": { "autoApproveBelow": 40, "blockAbove": 70 }
+    },
+    {
+      "id": "safety-first",
+      "label": "安全优先",
+      "thresholds": { "autoApproveBelow": 30, "blockAbove": 60 }
+    }
+  ],
   "cases": [
     { "id": "score-00", "score": 0, "goldDecision": "auto-approve" },
     { "id": "score-25", "score": 25, "goldDecision": "auto-approve" },

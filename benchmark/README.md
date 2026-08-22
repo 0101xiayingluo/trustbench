@@ -126,6 +126,18 @@ Risk thresholds have a separate versioned calibration protocol. `risk-threshold-
 npm.cmd run benchmark:calibration
 ```
 
+The same Gold Labels support a three-policy safety-efficiency scan. It reports under-governance, intervention, dangerous-action recall, false blocks, the Pareto frontier, and dominated policies:
+
+```powershell
+npm.cmd run benchmark:pareto
+```
+
+The checked-in result selects the balanced 40/70 policy. Automation-first 50/80 lowers intervention but leaves 3/12 cases under-governed; safety-first 30/60 increases intervention and creates one false block without improving dangerous recall.
+
+`benchmark/policy/fallback.mjs` defines the tested provider-degradation contract. Existing policy blocks stay blocked; invalid structured plans fail closed before browser execution; unknown pricing produces `insufficient-data`; provider timeouts can use an approved versioned static plan only for low-risk work and otherwise route to manual review.
+
+`benchmark/product/business-value.mjs` exposes an assumption-driven value model for avoided loss, review savings, maintenance cost, model cost, and estimated net value. Its output is a planning scenario, not realized production ROI.
+
 `benchmark/suites/creator-openai.json` runs the same five workflows through the real OpenAI Agent. Its `batch.json` includes aggregate calls, models, Token counts, average latency, priced-call count, estimated cost, and an auditable release decision. Keep CI on the deterministic suite unless external API spend is explicitly intended.
 
 ### Release policy

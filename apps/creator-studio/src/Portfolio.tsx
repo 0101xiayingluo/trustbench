@@ -4,6 +4,48 @@ import "./Portfolio.css";
 type Decision = "auto-approve" | "human-review" | "block";
 type DemoStatus = "idle" | "running" | "complete";
 
+type BusinessAssumptions = {
+  monthlyActions: number;
+  highRiskShare: number;
+  baselineIncidentRate: number;
+  averageIncidentLoss: number;
+  preventionRate: number;
+  baselineReviewRate: number;
+  governedReviewRate: number;
+  reviewMinutes: number;
+  reviewerHourlyCost: number;
+  monthlyMaintenanceHours: number;
+  strategyHourlyCost: number;
+  modelCostPerAction: number;
+};
+
+const defaultBusinessAssumptions: BusinessAssumptions = {
+  monthlyActions: 1000,
+  highRiskShare: 20,
+  baselineIncidentRate: 1,
+  averageIncidentLoss: 20000,
+  preventionRate: 80,
+  baselineReviewRate: 100,
+  governedReviewRate: 40,
+  reviewMinutes: 5,
+  reviewerHourlyCost: 100,
+  monthlyMaintenanceHours: 40,
+  strategyHourlyCost: 100,
+  modelCostPerAction: 0.0031,
+};
+
+const paretoPolicies = [
+  { id: "automation", label: "自动化优先", threshold: "50 / 80", underGoverned: "3 / 12", intervention: "58.3%", dangerousRecall: "66.7%", falseBlock: "0%" },
+  { id: "balanced", label: "平衡策略", threshold: "40 / 70", underGoverned: "0 / 12", intervention: "75.0%", dangerousRecall: "100%", falseBlock: "0%" },
+  { id: "safety", label: "安全优先", threshold: "30 / 60", underGoverned: "0 / 12", intervention: "83.3%", dangerousRecall: "100%", falseBlock: "11.1%" },
+] as const;
+
+const fallbackCases = [
+  { code: "PROVIDER_TIMEOUT", title: "模型超时或不可用", action: "低风险仅允许已审批静态计划；其余进入人工队列" },
+  { code: "INVALID_PLAN", title: "结构化计划校验失败", action: "拒绝计划，不启动浏览器，发布状态 NO-GO" },
+  { code: "PRICING_MISSING", title: "模型价格信息缺失", action: "保留执行证据，发布状态转为 insufficient-data" },
+] as const;
+
 const signals = [
   { id: "budget-change", label: "预算调整超过策略阈值", detail: "配置变更超出 20%", weight: 30 },
   { id: "roi-gap", label: "预期 ROI 低于历史基线", detail: "业务收益存在下行风险", weight: 25 },
@@ -177,6 +219,83 @@ function PortfolioDemo() {
   );
 }
 
+function BusinessValueCalculator() {
+  const [assumptions, setAssumptions] = useState(defaultBusinessAssumptions);
+  const metrics = useMemo(() => {
+    const highRiskShare = assumptions.highRiskShare / 100;
+    const incidentRate = assumptions.baselineIncidentRate / 100;
+    const preventionRate = assumptions.preventionRate / 100;
+    const baselineReviewRate = assumptions.baselineReviewRate / 100;
+    const governedReviewRate = assumptions.governedReviewRate / 100;
+    const baselineExpectedLoss = assumptions.monthlyActions * highRiskShare * incidentRate * assumptions.averageIncidentLoss;
+    const expectedAvoidedLoss = baselineExpectedLoss * preventionRate;
+    const avoidedReviews = assumptions.monthlyActions * Math.max(0, baselineReviewRate - governedReviewRate);
+    const reviewCostSaved = avoidedReviews * assumptions.reviewMinutes / 60 * assumptions.reviewerHourlyCost;
+    const maintenanceCost = assumptions.monthlyMaintenanceHours * assumptions.strategyHourlyCost;
+    const modelCost = assumptions.monthlyActions * assumptions.modelCostPerAction;
+    return {
+      baselineExpectedLoss,
+      expectedAvoidedLoss,
+      reviewCostSaved,
+      maintenanceCost,
+      modelCost,
+      estimatedNetValue: expectedAvoidedLoss + reviewCostSaved - maintenanceCost - modelCost,
+    };
+  }, [assumptions]);
+
+  function updateAssumption(key: keyof BusinessAssumptions, value: string) {
+    const parsed = Number(value);
+    setAssumptions((current) => {
+      const percentageKeys: Array<keyof BusinessAssumptions> = ["highRiskShare", "baselineIncidentRate", "preventionRate", "baselineReviewRate", "governedReviewRate"];
+      let nextValue = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+      if (percentageKeys.includes(key)) nextValue = Math.min(100, nextValue);
+      if (key === "governedReviewRate") nextValue = Math.min(current.baselineReviewRate, nextValue);
+      const next = { ...current, [key]: nextValue };
+      if (key === "baselineReviewRate" && nextValue < current.governedReviewRate) next.governedReviewRate = nextValue;
+      return next;
+    });
+  }
+
+  const currency = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", maximumFractionDigits: 0 });
+  const preciseCurrency = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  return (
+    <div className="business-calculator" data-testid="business-calculator">
+      <div className="business-calculator-heading">
+        <div><span className="portfolio-kicker">ADJUSTABLE SCENARIO MODEL</span><h3>业务价值情景计算器</h3></div>
+        <strong>情景测算，不代表已上线收益</strong>
+      </div>
+      <div className="business-calculator-body">
+        <div className="business-inputs">
+          <label>月均 Agent 动作数<input type="number" min="0" step="100" value={assumptions.monthlyActions} onChange={(event) => updateAssumption("monthlyActions", event.target.value)} /></label>
+          <label>高风险动作占比 (%)<input type="number" min="0" max="100" step="1" value={assumptions.highRiskShare} onChange={(event) => updateAssumption("highRiskShare", event.target.value)} /></label>
+          <label>基线事件率 (%)<input type="number" min="0" max="100" step="0.1" value={assumptions.baselineIncidentRate} onChange={(event) => updateAssumption("baselineIncidentRate", event.target.value)} /></label>
+          <label>单次平均损失 (CNY)<input type="number" min="0" step="1000" value={assumptions.averageIncidentLoss} onChange={(event) => updateAssumption("averageIncidentLoss", event.target.value)} /></label>
+          <label>预计防控率 (%)<input type="number" min="0" max="100" step="5" value={assumptions.preventionRate} onChange={(event) => updateAssumption("preventionRate", event.target.value)} /></label>
+          <label>基线人审率 (%)<input type="number" min="0" max="100" step="5" value={assumptions.baselineReviewRate} onChange={(event) => updateAssumption("baselineReviewRate", event.target.value)} /></label>
+          <label>治理后人审率 (%)<input type="number" min="0" max="100" step="5" value={assumptions.governedReviewRate} onChange={(event) => updateAssumption("governedReviewRate", event.target.value)} /></label>
+          <label>单次审核分钟数<input type="number" min="0" step="1" value={assumptions.reviewMinutes} onChange={(event) => updateAssumption("reviewMinutes", event.target.value)} /></label>
+          <label>审核人力时薪 (CNY)<input type="number" min="0" step="10" value={assumptions.reviewerHourlyCost} onChange={(event) => updateAssumption("reviewerHourlyCost", event.target.value)} /></label>
+          <label>月度策略维护小时<input type="number" min="0" step="5" value={assumptions.monthlyMaintenanceHours} onChange={(event) => updateAssumption("monthlyMaintenanceHours", event.target.value)} /></label>
+          <label>策略维护时薪 (CNY)<input type="number" min="0" step="10" value={assumptions.strategyHourlyCost} onChange={(event) => updateAssumption("strategyHourlyCost", event.target.value)} /></label>
+          <label>单次模型成本 (CNY)<input type="number" min="0" step="0.0001" value={assumptions.modelCostPerAction} onChange={(event) => updateAssumption("modelCostPerAction", event.target.value)} /></label>
+        </div>
+        <div className="business-results" aria-live="polite">
+          <div className="business-net-value"><span>预计月度净价值</span><strong>{currency.format(metrics.estimatedNetValue)}</strong><small>可避免损失 + 审核节省 - 策略维护 - 模型成本</small></div>
+          <dl>
+            <div><dt>基线预期损失</dt><dd>{currency.format(metrics.baselineExpectedLoss)}</dd></div>
+            <div><dt>预计避免损失</dt><dd>{currency.format(metrics.expectedAvoidedLoss)}</dd></div>
+            <div><dt>审核人力节省</dt><dd>{currency.format(metrics.reviewCostSaved)}</dd></div>
+            <div><dt>策略维护成本</dt><dd>-{currency.format(metrics.maintenanceCost)}</dd></div>
+            <div><dt>模型调用估算</dt><dd>-{preciseCurrency.format(metrics.modelCost)}</dd></div>
+          </dl>
+          <p>默认以全人工审批为效率基线；单次模型成本使用人民币情景输入，不与上方美元观测样例混算。所有输入均可调整，结果用于立项与敏感性分析。</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Portfolio() {
   return (
     <main className="portfolio-page" data-testid="portfolio-page">
@@ -184,7 +303,7 @@ export default function Portfolio() {
         <a className="portfolio-wordmark" href="#top"><span>TB</span><strong>TrustBench</strong></a>
         <nav aria-label="作品集导航">
           <a href="#case">产品案例</a>
-          <a href="#benchmark">基线实验</a>
+          <a href="#benchmark">策略权衡</a>
           <a href="#demo">交互 Demo</a>
           <a href="/">控制台</a>
         </nav>
@@ -195,6 +314,7 @@ export default function Portfolio() {
         <div className="portfolio-hero-copy">
           <p className="portfolio-kicker">AI PRODUCT CASE STUDY · 2026</p>
           <h1>TrustBench</h1>
+          <p className="portfolio-hero-eyebrow">增长场景 Agent 可信执行与资损防控平台</p>
           <p className="portfolio-hero-lead">让 Computer-use Agent 的每一次业务决策，都可评测、可解释、可追溯。</p>
           <div className="portfolio-hero-actions">
             <a className="portfolio-primary-action" href="#demo">体验风险路由 Demo</a>
@@ -205,7 +325,7 @@ export default function Portfolio() {
           <div><dt>10</dt><dd>正向业务流程</dd></div>
           <div><dt>6</dt><dd>对抗攻击路径</dd></div>
           <div><dt>48 / 48</dt><dd>三轮稳定性执行</dd></div>
-          <div><dt>47 + 5</dt><dd>单元测试与 E2E</dd></div>
+          <div><dt>56 + 5</dt><dd>单元测试与 E2E</dd></div>
         </dl>
         <figure className="portfolio-product-shot">
           <img src="/trustbench-console.png" alt="TrustBench 发布决策控制台，展示风险路由、发布门禁和运行指标" />
@@ -297,6 +417,36 @@ export default function Portfolio() {
           </div>
           <p>初始阈值让 40、45 分任务自动放行，并把 75 分高风险任务送往人工确认；基于动作边界 Gold Label 调整后，三处欠治理路由归零。</p>
         </div>
+        <div className="portfolio-pareto">
+          <div className="portfolio-subsection-heading">
+            <span>安全 × 效率 PARETO</span>
+            <strong>40 / 70 不是拍脑袋，而是三档策略扫描后的平衡点。</strong>
+            <p>同一 12 条封闭校准集；“干预率”包含人工确认与强制拦截，数据不外推至线上流量。</p>
+          </div>
+          <div className="portfolio-pareto-table-wrap">
+            <table className="portfolio-pareto-table">
+              <thead><tr><th>策略</th><th>阈值</th><th>欠治理</th><th>干预率</th><th>危险召回</th><th>误拦截</th></tr></thead>
+              <tbody>{paretoPolicies.map((policy) => (
+                <tr className={policy.id === "balanced" ? "pareto-selected" : ""} key={policy.id}>
+                  <td><strong>{policy.label}</strong>{policy.id === "balanced" && <small>已选择</small>}</td>
+                  <td>{policy.threshold}</td><td>{policy.underGoverned}</td><td>{policy.intervention}</td><td>{policy.dangerousRecall}</td><td>{policy.falseBlock}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+          <p className="portfolio-pareto-conclusion"><strong>决策：</strong>自动化优先少干预 16.7 pp，但仍有 25% 欠治理；安全优先多干预 8.3 pp 且产生 11.1% 误拦截，却没有提升危险召回，因此被平衡策略支配。</p>
+        </div>
+        <div className="portfolio-fallback">
+          <div className="portfolio-subsection-heading">
+            <span>MODEL DEGRADATION</span>
+            <strong>模型失效时，权限边界不能一起失效。</strong>
+            <p>这是经过单元测试的降级规则与运行手册，不冒充生产环境自动容灾。</p>
+          </div>
+          <div className="fallback-case-list">
+            {fallbackCases.map((item) => <article key={item.code}><code>{item.code}</code><h3>{item.title}</h3><p>{item.action}</p></article>)}
+          </div>
+        </div>
+        <BusinessValueCalculator />
       </section>
 
       <section className="portfolio-demo-section" id="demo">
@@ -336,7 +486,7 @@ export default function Portfolio() {
         <div className="portfolio-evidence-grid">
           <div><strong>48 / 48</strong><span>三轮稳定性执行</span><small>16 场景 × 3 轮 · GO</small></div>
           <div><strong>6 / 6</strong><span>攻击路径识别</span><small>越权、绕审批、业务阈值</small></div>
-          <div><strong>47 / 47</strong><span>单元测试</span><small>含风险校准、基线指标与稳定性聚合</small></div>
+          <div><strong>56 / 56</strong><span>单元测试</span><small>含策略扫描、降级规则与价值模型</small></div>
           <div><strong>5 / 5</strong><span>端到端测试</span><small>3 条浏览器执行 + 2 条前置阻断</small></div>
         </div>
         <div className="portfolio-final-actions">

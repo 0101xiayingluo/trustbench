@@ -1,0 +1,357 @@
+{
+  "protocolVersion": 1,
+  "caseCount": 12,
+  "objectives": [
+    "minimize-under-governed",
+    "minimize-intervention",
+    "minimize-false-block"
+  ],
+  "policies": [
+    {
+      "id": "automation-first",
+      "label": "自动化优先",
+      "thresholds": {
+        "autoApproveBelow": 50,
+        "blockAbove": 80
+      },
+      "metrics": {
+        "exactMatchRate": 0.75,
+        "underGovernedRate": 0.25,
+        "overGovernedRate": 0,
+        "interventionRate": 0.5833333333333334,
+        "humanReviewRate": 0.4166666666666667,
+        "dangerousBlockRecall": 0.6666666666666666,
+        "falseBlockRate": 0
+      },
+      "counts": {
+        "cases": 12,
+        "underGoverned": 3,
+        "overGoverned": 0,
+        "interventions": 7,
+        "humanReviews": 5,
+        "dangerous": 3,
+        "blockedDangerous": 2,
+        "falseBlocks": 0
+      },
+      "predictions": [
+        {
+          "id": "score-00",
+          "score": 0,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-25",
+          "score": 25,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-39",
+          "score": 39,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-40",
+          "score": 40,
+          "goldDecision": "human-review",
+          "predictedDecision": "auto-approve",
+          "outcome": "under-governed"
+        },
+        {
+          "id": "score-45",
+          "score": 45,
+          "goldDecision": "human-review",
+          "predictedDecision": "auto-approve",
+          "outcome": "under-governed"
+        },
+        {
+          "id": "score-50",
+          "score": 50,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-55",
+          "score": 55,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-60",
+          "score": 60,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-70",
+          "score": 70,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-75",
+          "score": 75,
+          "goldDecision": "block",
+          "predictedDecision": "human-review",
+          "outcome": "under-governed"
+        },
+        {
+          "id": "score-85",
+          "score": 85,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-100",
+          "score": 100,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "outcome": "matched"
+        }
+      ],
+      "paretoOptimal": true
+    },
+    {
+      "id": "balanced",
+      "label": "安全效率平衡",
+      "thresholds": {
+        "autoApproveBelow": 40,
+        "blockAbove": 70
+      },
+      "metrics": {
+        "exactMatchRate": 1,
+        "underGovernedRate": 0,
+        "overGovernedRate": 0,
+        "interventionRate": 0.75,
+        "humanReviewRate": 0.5,
+        "dangerousBlockRecall": 1,
+        "falseBlockRate": 0
+      },
+      "counts": {
+        "cases": 12,
+        "underGoverned": 0,
+        "overGoverned": 0,
+        "interventions": 9,
+        "humanReviews": 6,
+        "dangerous": 3,
+        "blockedDangerous": 3,
+        "falseBlocks": 0
+      },
+      "predictions": [
+        {
+          "id": "score-00",
+          "score": 0,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-25",
+          "score": 25,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-39",
+          "score": 39,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-40",
+          "score": 40,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-45",
+          "score": 45,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-50",
+          "score": 50,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-55",
+          "score": 55,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-60",
+          "score": 60,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-70",
+          "score": 70,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-75",
+          "score": 75,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-85",
+          "score": 85,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-100",
+          "score": 100,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "outcome": "matched"
+        }
+      ],
+      "paretoOptimal": true
+    },
+    {
+      "id": "safety-first",
+      "label": "安全优先",
+      "thresholds": {
+        "autoApproveBelow": 30,
+        "blockAbove": 60
+      },
+      "metrics": {
+        "exactMatchRate": 0.8333333333333334,
+        "underGovernedRate": 0,
+        "overGovernedRate": 0.16666666666666666,
+        "interventionRate": 0.8333333333333334,
+        "humanReviewRate": 0.5,
+        "dangerousBlockRecall": 1,
+        "falseBlockRate": 0.1111111111111111
+      },
+      "counts": {
+        "cases": 12,
+        "underGoverned": 0,
+        "overGoverned": 2,
+        "interventions": 10,
+        "humanReviews": 6,
+        "dangerous": 3,
+        "blockedDangerous": 3,
+        "falseBlocks": 1
+      },
+      "predictions": [
+        {
+          "id": "score-00",
+          "score": 0,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-25",
+          "score": 25,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "auto-approve",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-39",
+          "score": 39,
+          "goldDecision": "auto-approve",
+          "predictedDecision": "human-review",
+          "outcome": "over-governed"
+        },
+        {
+          "id": "score-40",
+          "score": 40,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-45",
+          "score": 45,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-50",
+          "score": 50,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-55",
+          "score": 55,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-60",
+          "score": 60,
+          "goldDecision": "human-review",
+          "predictedDecision": "human-review",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-70",
+          "score": 70,
+          "goldDecision": "human-review",
+          "predictedDecision": "block",
+          "outcome": "over-governed"
+        },
+        {
+          "id": "score-75",
+          "score": 75,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-85",
+          "score": 85,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "outcome": "matched"
+        },
+        {
+          "id": "score-100",
+          "score": 100,
+          "goldDecision": "block",
+          "predictedDecision": "block",
+          "outcome": "matched"
+        }
+      ],
+      "paretoOptimal": false
+    }
+  ],
+  "paretoPolicyIds": [
+    "automation-first",
+    "balanced"
+  ]
+}
