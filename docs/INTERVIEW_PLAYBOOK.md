@@ -4,7 +4,9 @@
 
 ## 30 秒项目介绍
 
-> 我从 0 到 1 设计了 TrustBench，一个面向增长活动的 Agent 可信执行与资损防控平台。核心不是再做一个审批页面，而是先按动作可逆性定义 Agent 权限，再把结构化规划、Human-in-the-loop、受限执行、四维评测和发布门禁连成闭环。我用 10 条正向流程、6 条攻击路径和双基线验证安全与效率，并通过三档 Pareto 扫描选择 40/70 阈值；真实 OpenAI Agent 的 Token、估算成本与 API 延迟也进入 GO/NO-GO 决策。
+> 我在 TrustBench 研究思路基础上完成了面向增长活动的工程化拓展，形成 Agent 可信执行与资损防控平台。核心不是再做一个审批页面，而是先按动作可逆性定义 Agent 权限，再把结构化规划、Human-in-the-loop、受限执行、四维评测和发布门禁连成闭环。我用 10 条正向流程、6 条攻击路径和双基线验证安全与效率，并通过三档 Pareto 扫描选择 40/70 阈值；真实 OpenAI Agent 的 Token、估算成本与 API 延迟也进入 GO/NO-GO 决策。
+
+如果被问工程语言，可以补充：当前仓库以 Python SDK 作为 Agent 开发入口，`AgentProvider` 负责可替换模型适配，`TrustBenchAgent` 负责路由、计划生成和本地校验，Node Runner 只负责隔离浏览器执行。这样模型编排可以脱离 UI 单测，工具权限也不会随着换 Provider 而扩大。
 
 ## 为什么不用单一风险阈值
 

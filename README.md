@@ -1,6 +1,6 @@
 # TrustBench
 
-面向复杂业务场景的 **AI Agent 可信执行与风险治理平台**。TrustBench 将真实 LLM 规划、受限工具执行、Human-in-the-loop 人工确认、自动评测和可审计发布门禁连接成一套完整产品闭环。
+面向复杂业务场景的 **Python + AI Agent 可信执行与风险治理平台**。TrustBench 将 Python Agent 编排、真实 LLM 规划、受限工具执行、Human-in-the-loop 人工确认、自动评测和可审计发布门禁连接成一套完整产品闭环。
 
 ![TrustBench 发布决策中心，展示风险路由、治理门禁和运行指标](docs/images/trustbench-console.png)
 
@@ -10,6 +10,48 @@
 - [AI 产品经理面试手册](docs/INTERVIEW_PLAYBOOK.md)
 - [产品设计文章](docs/TECHNICAL_ARTICLE.md)
 - [3 分钟 Demo 脚本](docs/DEMO_SCRIPT.md)
+
+> **给 Agent 开发岗位的入口：**先看 `trustbench_agent/` 和 `examples/python_agent_demo.py`。Python 层负责 Agent 的路由、计划、工具边界、降级和评测；现有 React 控制台与 Node Runner 作为可视化和浏览器执行验证层保留。
+
+## Python Agent 开发入口
+
+项目现在提供一个无运行时依赖的 Python SDK，不改变原有任务集和评测内容，只把 Agent 开发形式补齐为可安装、可测试、可替换 Provider 的 Python 工程：
+
+- `TrustBenchAgent`：编排风险路由 → Provider 规划 → 本地计划校验
+- `AgentProvider`：可替换的 Provider 协议，内置离线 `DeterministicAgent` 和真实 `OpenAIResponsesAgent`
+- `AgentPlan` / `AgentAction`：严格结构化动作模型，只允许 `click`、`fill`、`press`、`waitFor`
+- `RiskRouter`：复用现有 40/70 风险评分卡，输出模型路由和人工审批要求
+- `validate_plan_for_task`：按任务控件目录、语义动作和 `forbiddenActions` 做工具调用前拦截
+- `resolve_fallback_policy`：覆盖 Provider 超时、计划无效、价格缺失的 fail-closed 降级
+- `evaluate_task`：兼容现有 `benchmark/tasks` 和 `benchmark/results` 的 Python 四维评测器
+
+安装并运行离线 Agent 示例：
+
+```powershell
+# 在仓库根目录可直接运行，无第三方运行时依赖
+python examples/python_agent_demo.py
+python -m trustbench_agent route --task benchmark/tasks/launch-campaign-001.json
+python -m trustbench_agent plan --task benchmark/tasks/schedule-draft-001.json
+python -m trustbench_agent evaluate --task benchmark/tasks/schedule-draft-001.json --result benchmark/results/schedule-draft-001.example.json
+```
+
+如果要把 SDK 安装进虚拟环境，可在联网环境执行 `python -m pip install -e .`；本地开发和 CI 不依赖安装步骤。
+
+Python SDK 不直接绕过现有 Runner 执行浏览器，而是输出经过校验的结构化计划；需要真实浏览器时，将计划交给现有 Node Runner，继续复用原有轨迹快照、四维报告和发布门禁。这种分层让 Agent 逻辑可以独立测试，也让工具执行保持最小权限。
+
+真实 Provider 的接入方式与离线 fixture 保持一致：
+
+```python
+from trustbench_agent import OpenAIResponsesAgent, RiskRouter, TrustBenchAgent
+
+task = load_task()  # 读取 benchmark/tasks 下的同一份 JSON
+route = RiskRouter(reasoning_model="your-reasoning-model").route(task)
+agent = TrustBenchAgent(OpenAIResponsesAgent(api_key="..."), RiskRouter())
+agent_run = agent.create_plan(task)
+print(agent_run.plan.to_dict())
+```
+
+示例只负责生成和校验计划，不会把 API Key 写入日志，也不会让模型直接获得任意 Python 或浏览器执行权限。
 
 ## 项目解决什么问题
 
@@ -25,6 +67,7 @@ TrustBench 不只判断“任务有没有完成”，还会回答四个问题：
 ## 核心产品能力
 
 - 真实 OpenAI Agent 接入与严格 JSON Schema 计划生成
+- Python Agent SDK：Provider 抽象、结构化计划、风险路由、工具边界与离线评测
 - 只允许 `click`、`fill`、`press`、`waitFor` 的受限浏览器执行器
 - 结果、安全、效率、业务规则四维自动评测
 - 风险评分卡与自动通过、人工确认、强制拦截三级路由
@@ -224,6 +267,9 @@ benchmark/evaluator/   四维自动评测器
 benchmark/policy/      风险策略、基线、校准和 Pareto 分析
 benchmark/product/     商业价值情景模型
 benchmark/runner/      受限浏览器 Runner、批量与稳定性执行器
+trustbench_agent/      Python Agent SDK 与 OpenAI Responses 适配器
+examples/              Python Agent 离线开发示例
+tests/python/          Python SDK 与评测器测试
 benchmark/tasks/       版本化任务定义
 benchmark/plans/       静态与攻击动作计划
 benchmark/suites/      回归、对抗、扩展和真实模型套件
@@ -234,6 +280,6 @@ docs/                  PRD、技术文章、面试手册和 Demo 脚本
 
 ## 当前状态与范围
 
-当前版本已经实现：业务仿真环境、自动评测器、受限 Runner、语义计划预检、逐步轨迹快照、失败归因、真实 OpenAI Agent、风险评分与人工审批、Token/成本/延迟观测、双基线与 Pareto 实验、模型降级规则、商业价值情景模型、发布决策控制台、CI 和 Docker 部署。
+当前版本已经实现：Python Agent SDK、Provider 抽象、OpenAI Responses 适配器、结构化计划校验、风险路由、fail-closed 降级、Python 四维评测器、业务仿真环境、受限 Runner、语义计划预检、逐步轨迹快照、失败归因、真实 OpenAI Agent、风险评分与人工审批、Token/成本/延迟观测、双基线与 Pareto 实验、商业价值情景模型、发布决策控制台、CI 和 Docker 部署。
 
 这是一个完整的本地评测与治理产品。多租户登录、远程 Agent 凭据管理和分布式 Worker 调度属于云端产品范围，当前版本不将其包装为已经实现的能力。

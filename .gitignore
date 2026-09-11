@@ -4,6 +4,7 @@ dist/
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
 .vscode/
 benchmark/runs/
 benchmark/batches/
