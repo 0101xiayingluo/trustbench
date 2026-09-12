@@ -10,6 +10,7 @@
 - [AI 产品经理面试手册](docs/INTERVIEW_PLAYBOOK.md)
 - [产品设计文章](docs/TECHNICAL_ARTICLE.md)
 - [3 分钟 Demo 脚本](docs/DEMO_SCRIPT.md)
+- [Python Agent 开发 Demo 脚本](docs/AGENT_DEMO_SCRIPT.md)
 
 > **给 Agent 开发岗位的入口：**先看 `trustbench_agent/` 和 `examples/python_agent_demo.py`。Python 层负责 Agent 的路由、计划、工具边界、降级和评测；现有 React 控制台与 Node Runner 作为可视化和浏览器执行验证层保留。
 
