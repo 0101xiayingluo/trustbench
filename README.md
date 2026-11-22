@@ -1,18 +1,35 @@
-# TrustBench
+# TrustBench｜AI Agent 自动化测试与质量保障平台
 
-面向复杂业务场景的 **Python + AI Agent 可信执行与风险治理平台**。TrustBench 将 Python Agent 编排、真实 LLM 规划、受限工具执行、Human-in-the-loop 人工确认、自动评测和可审计发布门禁连接成一套完整产品闭环。
+面向 Computer-use Agent 的 **数据驱动自动化测试与质量保障平台**。TrustBench 将结构化用例、真实 LLM 规划、受限浏览器执行、状态快照、四维自动断言、失败归因、批量回归和发布质量门禁连接成一条可复现测试链路。
 
 ![TrustBench 发布决策中心，展示风险路由、治理门禁和运行指标](docs/images/trustbench-console.png)
 
 相关材料：
 
 - [产品需求文档（PRD）](docs/PRD.md)
-- [AI 产品经理面试手册](docs/INTERVIEW_PLAYBOOK.md)
+- [测试开发项目说明与面试手册](docs/TEST_DEVELOPMENT_GUIDE.md)
+- [AI 产品设计面试手册](docs/INTERVIEW_PLAYBOOK.md)
 - [产品设计文章](docs/TECHNICAL_ARTICLE.md)
 - [3 分钟 Demo 脚本](docs/DEMO_SCRIPT.md)
 - [Python Agent 开发 Demo 脚本](docs/AGENT_DEMO_SCRIPT.md)
 
-> **给 Agent 开发岗位的入口：**先看 `trustbench_agent/` 和 `examples/python_agent_demo.py`。Python 层负责 Agent 的路由、计划、工具边界、降级和评测；现有 React 控制台与 Node Runner 作为可视化和浏览器执行验证层保留。
+> **给测试开发岗位的入口：**先看 `benchmark/tasks/`、`benchmark/runner/`、`benchmark/evaluator/`、`benchmark/suites/` 和 `.github/workflows/ci.yml`。项目重点展示数据驱动用例协议、受限 Web 自动化执行、对抗测试、四维断言、Flaky Case 识别与发布质量门禁；Python Agent SDK 是被测对象与模型适配层。
+
+## 测试开发能力概览
+
+- **数据驱动用例：**用统一 JSON 描述任务目标、预期状态、禁止动作、业务规则、允许控件和最大执行步数。
+- **自动化执行：**Node.js + Playwright Runner 在隔离浏览器上下文中执行 `click`、`fill`、`press`、`waitFor`，并逐步采集状态快照。
+- **四维断言：**同时验证结果、安全、效率和业务规则，不把“最终状态正确”等同于测试通过。
+- **测试设计：**综合等价类、边界值、状态迁移、决策表和错误推测，覆盖正向流程与预期失败攻击路径。
+- **分层测试：**包含 Python/Node 单元测试、模块集成、浏览器 E2E、批量回归和多轮稳定性测试。
+- **质量门禁：**汇总通过率、安全违规、执行步数、Flaky Case、Token、成本、模型延迟和定价覆盖，输出 `GO`、`NO-GO` 或 `insufficient-data`。
+
+测试链路：
+
+```text
+JSON 用例 → Agent/基准计划 → 执行前预检 → Playwright Runner
+         → 状态快照 → 四维断言 → 失败归因 → 批量回归 → 发布门禁
+```
 
 ## Python Agent 开发入口
 
@@ -65,12 +82,13 @@ TrustBench 不只判断“任务有没有完成”，还会回答四个问题：
 3. **效率：**执行步数、Token、成本和 API 延迟是否合理？
 4. **业务规则：**预算、ROI、负责人授权等规则是否满足？
 
-## 核心产品能力
+## 核心测试能力
 
-- 真实 OpenAI Agent 接入与严格 JSON Schema 计划生成
+- 统一 JSON 用例协议与真实 OpenAI Agent 接入
 - Python Agent SDK：Provider 抽象、结构化计划、风险路由、工具边界与离线评测
-- 只允许 `click`、`fill`、`press`、`waitFor` 的受限浏览器执行器
+- 只允许 `click`、`fill`、`press`、`waitFor` 的 Playwright 受限浏览器 Runner
 - 结果、安全、效率、业务规则四维自动评测
+- 正向、边界、状态迁移与对抗安全用例
 - 风险评分卡与自动通过、人工确认、强制拦截三级路由
 - Human-in-the-loop 审批和高风险动作执行前阻断
 - 逐步状态快照、轨迹回放、运行对比和结构化失败归因
@@ -81,7 +99,7 @@ TrustBench 不只判断“任务有没有完成”，还会回答四个问题：
 - 可调整的商业价值情景计算器
 - CI 自动验证和 Docker 本地部署
 
-## 业务场景与策略创新
+## 测试场景与用例设计
 
 代表场景是增长活动配置与上线。平台不把风险判断完全交给模型，而是先按动作可逆性和业务影响定义权限边界：
 
@@ -99,7 +117,7 @@ TrustBench 不只判断“任务有没有完成”，还会回答四个问题：
 | `40-70` | 人工确认 | 模型生成计划，等待负责人授权 |
 | `> 70` | 强制拦截 | 不调用模型，不启动浏览器 |
 
-## 可复现评测结果
+## 可复现测试结果
 
 平台使用同一组 10 条正向业务流程和 6 条攻击路径建立两组对照：无前置治理基线用于衡量危险动作放行，全人工确认基线用于衡量无效确认。
 
@@ -139,6 +157,7 @@ npm.cmd run benchmark:pareto
 
 - 16 个场景连续执行 3 轮，结果为 **48 / 48 通过**
 - 16 / 16 用例保持稳定，波动用例为 0
+- **8 / 8 Python 单元测试**通过
 - **56 / 56 单元测试**通过
 - **5 / 5 端到端测试**通过
 - 发布回归 5 / 5 通过，结论为 `GO`
@@ -150,14 +169,14 @@ npm.cmd run benchmark:pareto
 npm.cmd run test:stability
 ```
 
-## AI 执行与发布闭环
+## 自动化测试与发布门禁闭环
 
-1. LLM 将业务任务转换成严格的结构化动作计划。
-2. 风险路由根据评分选择成本优先模型、人工确认或前置拦截。
-3. Runner 二次校验任务 ID、选择器和动作白名单。
-4. 浏览器只执行声明式动作，并记录每一步状态快照。
-5. 评测器检查结果、安全、效率和业务规则。
-6. 批量门禁汇总质量、Token、成本、延迟和定价覆盖，输出发布结论。
+1. 测试框架加载版本化 JSON 用例和静态基准计划或 LLM Agent。
+2. 风险路由与计划预检验证阈值、任务 ID、选择器、动作白名单和语义动作。
+3. Runner 在隔离浏览器上下文中执行声明式动作，并记录每一步状态快照。
+4. 评测器执行结果、安全、效率和业务规则四维断言并生成失败归因。
+5. Batch Runner 执行正向与预期失败攻击套件，多轮回归识别 Flaky Case。
+6. 质量门禁汇总通过率、安全违规、执行步数、Token、成本、延迟和定价覆盖，输出发布结论。
 
 模型不可用时不会扩大 Agent 权限：已拦截任务保持拦截；无效结构化计划直接 `NO-GO`；价格缺失时发布结论为 `insufficient-data`；只有低风险任务可以使用已经审批并版本化的静态计划，其余进入人工队列。
 
@@ -262,7 +281,7 @@ docker compose up --build
 ## 项目结构
 
 ```text
-apps/creator-studio/   前端控制台、仿真环境和作品集
+apps/creator-studio/   测试控制台、业务仿真环境和项目展示页
 benchmark/agents/      OpenAI 与外部 Agent 适配器
 benchmark/evaluator/   四维自动评测器
 benchmark/policy/      风险策略、基线、校准和 Pareto 分析
@@ -274,13 +293,13 @@ tests/python/          Python SDK 与评测器测试
 benchmark/tasks/       版本化任务定义
 benchmark/plans/       静态与攻击动作计划
 benchmark/suites/      回归、对抗、扩展和真实模型套件
-docs/                  PRD、技术文章、面试手册和 Demo 脚本
+docs/                  测试开发手册、PRD、技术文章和 Demo 脚本
 ```
 
 更详细的评测协议、报告字段和 Runner 参数见 [benchmark/README.md](benchmark/README.md)。
 
 ## 当前状态与范围
 
-当前版本已经实现：Python Agent SDK、Provider 抽象、OpenAI Responses 适配器、结构化计划校验、风险路由、fail-closed 降级、Python 四维评测器、业务仿真环境、受限 Runner、语义计划预检、逐步轨迹快照、失败归因、真实 OpenAI Agent、风险评分与人工审批、Token/成本/延迟观测、双基线与 Pareto 实验、商业价值情景模型、发布决策控制台、CI 和 Docker 部署。
+当前版本已经实现：统一 JSON 用例协议、Python/Node 分层测试、Playwright 受限 Runner、四维断言、语义计划预检、逐步状态快照、失败归因、正向与对抗套件、批量与稳定性回归、Flaky Case 识别、真实 OpenAI Agent、Token/成本/延迟观测、发布质量门禁、CI 和 Docker 部署。
 
-这是一个完整的本地评测与治理产品。多租户登录、远程 Agent 凭据管理和分布式 Worker 调度属于云端产品范围，当前版本不将其包装为已经实现的能力。
+这是一个可本地复现的 Agent 自动化测试与质量保障平台。当前结果来自版本化封闭验证集；多租户、远程凭据管理、分布式 Worker 和生产流量灰度属于下一阶段，当前版本不将其包装为已经实现的能力。

@@ -302,8 +302,8 @@ export default function Portfolio() {
       <header className="portfolio-nav">
         <a className="portfolio-wordmark" href="#top"><span>TB</span><strong>TrustBench</strong></a>
         <nav aria-label="作品集导航">
-          <a href="#case">产品案例</a>
-          <a href="#benchmark">策略权衡</a>
+          <a href="#case">测试案例</a>
+          <a href="#benchmark">测试证据</a>
           <a href="#demo">交互 Demo</a>
           <a href="/">控制台</a>
         </nav>
@@ -312,10 +312,10 @@ export default function Portfolio() {
 
       <section className="portfolio-hero" id="top">
         <div className="portfolio-hero-copy">
-          <p className="portfolio-kicker">AI PRODUCT CASE STUDY · 2026</p>
+          <p className="portfolio-kicker">AI AGENT TEST ENGINEERING · 2026</p>
           <h1>TrustBench</h1>
-          <p className="portfolio-hero-eyebrow">增长场景 Agent 可信执行与资损防控平台</p>
-          <p className="portfolio-hero-lead">让 Computer-use Agent 的每一次业务决策，都可评测、可解释、可追溯。</p>
+          <p className="portfolio-hero-eyebrow">AI Agent 自动化测试与质量保障平台</p>
+          <p className="portfolio-hero-lead">让 Computer-use Agent 的每一次规划、执行和发布，都可测试、可定位、可回归。</p>
           <div className="portfolio-hero-actions">
             <a className="portfolio-primary-action" href="#demo">体验风险路由 Demo</a>
             <a className="portfolio-secondary-action" href="/">打开评测控制台</a>
@@ -325,7 +325,7 @@ export default function Portfolio() {
           <div><dt>10</dt><dd>正向业务流程</dd></div>
           <div><dt>6</dt><dd>对抗攻击路径</dd></div>
           <div><dt>48 / 48</dt><dd>三轮稳定性执行</dd></div>
-          <div><dt>56 + 5</dt><dd>单元测试与 E2E</dd></div>
+          <div><dt>8 + 56 + 5</dt><dd>Python / Node / E2E</dd></div>
         </dl>
         <figure className="portfolio-product-shot">
           <img src="/trustbench-console.png" alt="TrustBench 发布决策控制台，展示风险路由、发布门禁和运行指标" />
@@ -335,18 +335,18 @@ export default function Portfolio() {
 
       <section className="portfolio-case" id="case">
         <div className="portfolio-section-heading">
-          <p className="portfolio-kicker">01 · PRODUCT THESIS</p>
-          <h2>Agent 完成任务，不等于业务可以信任它。</h2>
+          <p className="portfolio-kicker">01 · TESTING PROBLEM</p>
+          <h2>Agent 完成任务，不等于测试已经通过。</h2>
         </div>
         <div className="portfolio-case-grid">
           <div className="portfolio-case-story">
             <p>同样到达“活动已上线”的最终状态，一条路径经过风险预检与负责人授权，另一条路径可能绕过审批。传统成功率看不出这个差异。</p>
-            <p>TrustBench 把最终结果、执行轨迹、安全动作和业务规则放进同一评测协议，再用成本与延迟决定 Agent 是否具备发布条件。</p>
+            <p>TrustBench 把最终结果、执行轨迹、安全动作和业务规则放进同一测试协议，再通过回归稳定性、成本与延迟判断 Agent 是否具备发布条件。</p>
           </div>
           <dl className="portfolio-case-facts">
-            <div><dt>目标用户</dt><dd>AI 产品经理、Agent 工程团队、业务风控负责人</dd></div>
+            <div><dt>目标用户</dt><dd>测试开发工程师、Agent 工程团队、安全与质量负责人</dd></div>
             <div><dt>核心场景</dt><dd>增长活动配置、审批与上线治理</dd></div>
-            <div><dt>产品角色</dt><dd>从 0 到 1 产品定义、风险策略、全栈实现与验收</dd></div>
+            <div><dt>测试职责</dt><dd>测试架构、用例设计、自动化执行、缺陷归因与质量门禁</dd></div>
           </dl>
         </div>
       </section>
@@ -354,26 +354,26 @@ export default function Portfolio() {
       <section className="portfolio-system">
         <div className="portfolio-section-heading">
           <p className="portfolio-kicker">02 · SYSTEM DESIGN</p>
-          <h2>把模型能力收进可治理的业务闭环。</h2>
+          <h2>把不确定的 Agent 行为收进可复现测试闭环。</h2>
         </div>
         <ol className="portfolio-flow">
-          <li><span>01</span><strong>结构化任务</strong><p>目标状态、禁止动作、审批要求与业务阈值</p></li>
-          <li><span>02</span><strong>风险评分</strong><p>预算、ROI、权限、可逆性、异常时段</p></li>
-          <li><span>03</span><strong>受限执行</strong><p>真实 LLM 规划，只允许白名单浏览器动作</p></li>
-          <li><span>04</span><strong>自动评测</strong><p>结果 × 安全 × 效率 × 业务规则</p></li>
-          <li><span>05</span><strong>发布决策</strong><p>质量、Token、成本和延迟汇总为 GO / NO-GO</p></li>
+          <li><span>01</span><strong>数据驱动用例</strong><p>目标状态、禁止动作、业务规则与步数边界</p></li>
+          <li><span>02</span><strong>边界与对抗</strong><p>等价类、阈值边界、状态迁移与攻击路径</p></li>
+          <li><span>03</span><strong>受限执行</strong><p>Playwright 隔离执行，只允许白名单浏览器动作</p></li>
+          <li><span>04</span><strong>四维断言</strong><p>结果 × 安全 × 效率 × 业务规则</p></li>
+          <li><span>05</span><strong>质量门禁</strong><p>回归、Flaky、Token、成本和延迟汇总为发布结论</p></li>
         </ol>
       </section>
 
       <section className="portfolio-decisions">
         <div className="portfolio-section-heading">
-          <p className="portfolio-kicker">03 · KEY PM DECISIONS</p>
-          <h2>三个能在面试中讲清楚的产品判断。</h2>
+          <p className="portfolio-kicker">03 · TEST DESIGN</p>
+          <h2>三个决定 Agent 测试可信度的测试设计。</h2>
         </div>
         <div className="portfolio-decision-list">
-          <article><span>动作边界</span><h3>按可逆性定义 Agent 权限</h3><p>只读动作自动执行；文案与时段变更可撤销；预算上限、负责人切换和正式上线必须明确授权。</p></article>
-          <article><span>路由规则</span><h3>评分卡优先于模型直觉</h3><p>分数低于 40 自动通过，40-70 进入人工确认，高于 70 在模型调用及浏览器执行前强制拦截。</p></article>
-          <article><span>评测可信度</span><h3>主动攻击，而不是等待零违规</h3><p>越权删除、审批绕过、低 ROI、预算超限与异常时段共六条攻击路径，只有命中指定失败码才计为评测通过。</p></article>
+          <article><span>状态与权限</span><h3>把结果断言和过程安全分开</h3><p>除了最终状态，还检查动作白名单、语义动作和审批依赖，避免 Agent 通过危险路径得到正确结果。</p></article>
+          <article><span>边界与决策表</span><h3>覆盖 39/40/70/71 风险边界</h3><p>组合预算、ROI、权限、可逆性和异常时段信号，验证自动通过、人工确认和强制拦截三类等价类。</p></article>
+          <article><span>预期失败</span><h3>主动攻击，而不是等待零违规</h3><p>越权删除、审批绕过、低 ROI、预算超限与异常时段共六条攻击路径，只有内层报告失败并命中指定失败码，外层用例才算通过。</p></article>
         </div>
       </section>
 
@@ -385,7 +385,7 @@ export default function Portfolio() {
         <div className="portfolio-benchmark-layout">
           <div className="portfolio-benchmark-table-wrap">
             <table className="portfolio-benchmark-table">
-              <thead><tr><th>治理指标</th><th>对照策略</th><th>TrustBench</th><th>变化</th></tr></thead>
+              <thead><tr><th>质量指标</th><th>对照策略</th><th>TrustBench</th><th>变化</th></tr></thead>
               <tbody>
                 <tr><td><strong>危险路径放行率</strong><small>基线 A：无前置治理</small></td><td>6 / 6 · 100%</td><td className="benchmark-good">0 / 6 · 0%</td><td>-100 pp</td></tr>
                 <tr><td><strong>人工确认次数</strong><small>基线 B：全部人工确认</small></td><td>10 · 全量人审</td><td className="benchmark-good">4 · 按风险路由</td><td>-60%</td></tr>
@@ -438,9 +438,9 @@ export default function Portfolio() {
         </div>
         <div className="portfolio-fallback">
           <div className="portfolio-subsection-heading">
-            <span>MODEL DEGRADATION</span>
-            <strong>模型失效时，权限边界不能一起失效。</strong>
-            <p>这是经过单元测试的降级规则与运行手册，不冒充生产环境自动容灾。</p>
+            <span>FAILURE HANDLING TEST</span>
+            <strong>通过异常场景验证模型失效时仍保持安全边界。</strong>
+            <p>模型超时、无效计划和定价缺失都有可断言的预期结果；这是经过单元测试的降级规则，不冒充生产环境自动容灾。</p>
           </div>
           <div className="fallback-case-list">
             {fallbackCases.map((item) => <article key={item.code}><code>{item.code}</code><h3>{item.title}</h3><p>{item.action}</p></article>)}
@@ -451,8 +451,8 @@ export default function Portfolio() {
 
       <section className="portfolio-demo-section" id="demo">
         <div className="portfolio-section-heading portfolio-section-heading-light">
-          <p className="portfolio-kicker">05 · WORKING DEMO</p>
-          <h2>改变业务信号，观察 Agent 的动作空间如何变化。</h2>
+          <p className="portfolio-kicker">05 · INTERACTIVE TEST DEMO</p>
+          <h2>改变测试输入，观察风险路由、执行边界与断言结果。</h2>
         </div>
         <PortfolioDemo />
       </section>
@@ -481,21 +481,21 @@ export default function Portfolio() {
       <section className="portfolio-evidence">
         <div className="portfolio-section-heading">
           <p className="portfolio-kicker">07 · DELIVERY EVIDENCE</p>
-          <h2>不是概念稿，是可运行、可回归的本地产品。</h2>
+          <h2>不是测试概念稿，是可运行、可回归的自动化平台。</h2>
         </div>
         <div className="portfolio-evidence-grid">
           <div><strong>48 / 48</strong><span>三轮稳定性执行</span><small>16 场景 × 3 轮 · GO</small></div>
           <div><strong>6 / 6</strong><span>攻击路径识别</span><small>越权、绕审批、业务阈值</small></div>
-          <div><strong>56 / 56</strong><span>单元测试</span><small>含策略扫描、降级规则与价值模型</small></div>
+          <div><strong>8 + 56</strong><span>Python / Node 测试</span><small>含 Runner、Evaluator、策略与门禁</small></div>
           <div><strong>5 / 5</strong><span>端到端测试</span><small>3 条浏览器执行 + 2 条前置阻断</small></div>
         </div>
         <div className="portfolio-final-actions">
-          <div><p className="portfolio-kicker">EXPLORE THE PRODUCT</p><h2>从案例叙事进入真实运行现场。</h2></div>
+          <div><p className="portfolio-kicker">EXPLORE THE TEST PLATFORM</p><h2>从测试设计进入真实自动化运行现场。</h2></div>
           <div><a className="portfolio-primary-action" href="/">打开控制台</a><a className="portfolio-secondary-action" href="/sandbox/">操作仿真环境</a></div>
         </div>
       </section>
 
-      <footer className="portfolio-footer"><strong>TrustBench</strong><span>AI Agent Evaluation & Governance</span><a href="https://github.com/0101xiayingluo/trustbench">GitHub</a></footer>
+      <footer className="portfolio-footer"><strong>TrustBench</strong><span>AI Agent Test Automation & Quality Engineering</span><a href="https://github.com/0101xiayingluo/trustbench">GitHub</a></footer>
     </main>
   );
 }
